@@ -52,7 +52,9 @@ WireGuard ships in the kernel; `corrosion` (cluster state) is bundled in `unclou
 
 The only thing you install on your machine is **[mise](https://mise.jdx.dev)**. `mise install` pins and fetches everything else — `opentofu`, `hcloud`, `nushell`, `fnox` — and `mise run setup` adds the `uncloud` CLI (`uc`). (`git`, `ssh`, and `curl` are assumed — every dev box has them.)
 
-**No local Docker.** Deploys run on the *remote* cluster; the Hetzner box pulls the images. Docker on your laptop is only needed for the optional `docker pussh` (pushing your own locally-built images to the box without a registry) — not used by any demo here.
+**No local Docker needed here.** This repo deploys to a *remote* Hetzner box — it pulls the images, runs the containers, and `uc` just drives it over SSH. Docker on your laptop is only for the optional `docker pussh` (pushing locally-built images to the box without a registry).
+
+> Want a **local** cluster instead? Uncloud machines are Linux, so on a Mac you can run one in [OrbStack](https://orbstack.dev) (or Docker Desktop / Colima), or spin up throwaway local clusters with `ucind` — see the [Uncloud docs](https://uncloud.run/docs). `vm-uncloud` is specifically the remote-Hetzner + Cloudflare flavor.
 
 You provide: a **Cloudflare** zone + API token (`Zone:DNS:Edit`, plus R2 if you want remote state), and a **Hetzner** project + an SSH key.
 
