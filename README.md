@@ -37,9 +37,11 @@ Uncloud installs itself onto a fresh Linux box **over SSH** — you never copy b
 
 (This is why we *didn't* stick with per-host HTTP-01: the cert failures, the propagation waits, and the rate-limit churn are all symptoms of it.)
 
+**No local Docker required.** `uc deploy` orchestrates the *remote* cluster — images are pulled by the Hetzner box's Docker, not yours. Your machine just needs `uc` + the mise tools. (Local Docker is only needed for the *optional* `docker pussh`, which pushes your own locally-built images to the box without a registry — not used by the demos.)
+
 | Where | What | Installed by |
 |-------|------|--------------|
-| Your machine | `uncloud` CLI (`uc`), `docker-pussh` | `mise run setup` |
+| Your machine | `uncloud` CLI (`uc`); `docker-pussh` (optional, needs local Docker) | `mise run setup` |
 | Hetzner box | Docker + `uncloudd` | `cloud-init/uncloud.yaml` on first boot |
 | Hetzner box | readiness gate (SSH up + cloud-init done) | tofu `remote-exec` provisioner — `apply` blocks until ready, **no shell polling** |
 | Hetzner box | WireGuard mesh, cluster | `uc machine init` over SSH |
