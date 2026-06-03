@@ -1,8 +1,6 @@
 #!/usr/bin/env nu
-# Config for the WordPress recipe. recipe.nu runs this with DOMAIN in the env.
-# stdout = JSON env merged into the deploy; stderr = human notes.
-# DB credentials are persisted (scripts/secrets.nu) so they stay STABLE across
-# redeploys — the MariaDB volume keeps the original password.
+# Config for the experimental WordPress + Galera recipe. Same persisted DB
+# credentials as the single-node WordPress recipe.
 use ../../scripts/secrets.nu *
 
 def main [] {
@@ -12,6 +10,7 @@ def main [] {
     print -e "no domain — run 'mise run up' first, or set WP_DOMAIN=host.example.com"
     exit 1
   }
+  print -e "EXPERIMENTAL: Galera needs a multi-node cluster (node_count >= 3) — see issue #2"
   {
     HOST: $host
     WP_DOMAIN: $host

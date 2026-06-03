@@ -1,0 +1,75 @@
+# EXPERIMENTAL — scalable WordPress on a multi-master MariaDB Galera cluster.
+#
+# Needs a multi-node Uncloud cluster (node_count >= 3 recommended). This is a
+# reviewed STARTING POINT, NOT turnkey: Galera bootstrap and restart semantics
+# need an operator's care (a restarted bootstrap node can split-brain), and it
+# has not been validated on a live cluster. Tracking + design: issue #2.
+#
+# Design: one bootstrap node starts the cluster (gcomm:// = new cluster); joiners
+# run in global mode (one per machine) and discover peers via Uncloud's internal
+# DNS (gcomm://mariadb-bootstrap,mariadb). WordPress runs replicated against the
+# `mariadb` joiners.
+#
+#   mise run recipe wordpress-galera
+services:
+  # Bootstraps the cluster. Keep exactly one; do not scale.
+  mariadb-bootstrap:
+    image: mariadb:11.4
+    command: >
+      --wsrep-on=ON
+      --wsrep-provider=/usr/lib/galera/libgalera_smm.so
+      --wsrep-cluster-name=wordpress
+      --wsrep-cluster-address=gcomm://
+      --binlog-format=ROW
+      --default-storage-engine=InnoDB
+      --innodb-autoinc-lock-mode=2
+    environment:
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MARIADB_DATABASE: ${DB_NAME}
+      MARIADB_USER: ${DB_USER}
+      MARIADB_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - galera_bootstrap:/var/lib/mysql
+    deploy:
+      mode: replicated
+      replicas: 1
+
+  # Joiners — one per machine. Find the cluster via Uncloud DNS.
+  mariadb:
+    image: mariadb:11.4
+    command: >
+      --wsrep-on=ON
+      --wsrep-provider=/usr/lib/galera/libgalera_smm.so
+      --wsrep-cluster-name=wordpress
+      --wsrep-cluster-address=gcomm://mariadb-bootstrap,mariadb
+      --binlog-format=ROW
+      --default-storage-engine=InnoDB
+      --innodb-autoinc-lock-mode=2
+    environment:
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+    volumes:
+      - galera_data:/var/lib/mysql
+    deploy:
+      mode: global
+
+  wordpress:
+    image: wordpress:7.0
+    depends_on:
+      - mariadb
+    deploy:
+      mode: replicated
+      replicas: 2
+    x-ports:
+      - ${WP_DOMAIN}:80/https
+    environment:
+      WORDPRESS_DB_HOST: mariadb:3306
+      WORDPRESS_DB_USER: ${DB_USER}
+      WORDPRESS_DB_PASSWORD: ${DB_PASSWORD}
+      WORDPRESS_DB_NAME: ${DB_NAME}
+    volumes:
+      - wordpress_data:/var/www/html
+
+volumes:
+  galera_bootstrap:
+  galera_data:
+  wordpress_data:

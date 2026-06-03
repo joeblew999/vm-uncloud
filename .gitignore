@@ -24,3 +24,6 @@ caddy/external.caddyfile
 
 # Local scratch.
 .DS_Store
+
+# Generated per-app secret pointers (values live in the keychain).
+fnox.secrets.toml

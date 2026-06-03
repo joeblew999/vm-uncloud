@@ -1,0 +1,26 @@
+# Moltis — self-hosted personal AI agent server (Rust, single binary). Web UI at
+# https://moltis.<your-domain>. MOLTIS_BEHIND_PROXY is set because Caddy fronts it;
+# MOLTIS_TOKEN (persisted) bootstraps auth. Configure an LLM provider on first boot
+# using the setup code from `uc logs moltis`.
+#
+#   mise run recipe moltis
+#
+# SECURITY: Moltis isolates the agent's shell commands in Docker, so it mounts
+# /var/run/docker.sock — that grants this container full Docker access on its
+# machine. Deploy only where you're comfortable granting that.
+services:
+  moltis:
+    image: ghcr.io/moltis-org/moltis:latest
+    environment:
+      MOLTIS_BEHIND_PROXY: "true"
+      MOLTIS_TOKEN: ${MOLTIS_TOKEN}
+    volumes:
+      - moltis_config:/home/moltis/.config/moltis
+      - moltis_data:/home/moltis/.moltis
+      - /var/run/docker.sock:/var/run/docker.sock
+    x-ports:
+      - moltis.${DOMAIN}:13131/https
+
+volumes:
+  moltis_config:
+  moltis_data:

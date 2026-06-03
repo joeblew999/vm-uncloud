@@ -104,12 +104,18 @@ There is no registry to run. Uncloud embeds [unregistry](https://github.com/psvi
 
 ```bash
 mise run recipe            # list everything (local + upstream)
-mise run recipe wordpress  # local example — WordPress + MariaDB at https://wordpress.<your-domain>
-mise run recipe imaginary  # local example — libvips image API (h2non/imaginary) at https://img.<your-domain>
-mise run recipe nats       # upstream catalog
+mise run recipe wordpress        # WordPress + MariaDB at https://wordpress.<your-domain>
+mise run recipe imaginary        # libvips image API (h2non/imaginary) at https://img.<your-domain>
+mise run recipe moltis           # self-hosted AI agent server at https://moltis.<your-domain>
+mise run recipe wordpress-galera # EXPERIMENTAL — multi-master Galera WordPress (needs node_count>=3)
+mise run recipe nats             # upstream catalog
 ```
 
-A recipe is a folder — `compose.yaml` plus an optional `prepare.nu`. `recipe.nu` is generic: it injects `${DOMAIN}`, and if the recipe ships a `prepare.nu` it runs it (stdout = JSON env merged into the deploy, stderr = notes) so each recipe owns its own config — no recipe-specific logic in the shared script. `recipe imaginary` prints a generated API key (send as the `API-Key` header; set `IMAGINARY_API_KEY` to pin it) and serves transforms from `?url=` sources including R2. Add upstream sources in [`recipes.toml`](recipes.toml):
+A recipe is a folder — `compose.yaml` plus an optional `prepare.nu`. `recipe.nu` is generic: it injects `${DOMAIN}`, and if the recipe ships a `prepare.nu` it runs it (stdout = JSON env merged into the deploy, stderr = notes) so each recipe owns its config — no recipe-specific logic in the shared script.
+
+Generated credentials (DB passwords, the imaginary API key, the moltis token) are **persisted** via [`scripts/secrets.nu`](scripts/secrets.nu): created once, stored in the OS keychain (pointers in the gitignored `fnox.secrets.toml`), and reused on every deploy — so a redeploy never invalidates a persistent volume's password. (When [Uncloud ships native `secrets:`](https://github.com/psviderski/uncloud/pull/385), recipes move to that — issue #1.)
+
+Add upstream sources in [`recipes.toml`](recipes.toml):
 
 ```toml
 [[sources]]
