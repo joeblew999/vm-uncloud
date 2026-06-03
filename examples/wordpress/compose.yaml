@@ -17,7 +17,7 @@ services:
       - mariadb_data:/var/lib/mysql
 
   wordpress:
-    image: wordpress:6.8
+    image: wordpress:7.0
     depends_on:
       - mariadb
     # Wildcard cert covers this hostname — no per-host TLS setup.
