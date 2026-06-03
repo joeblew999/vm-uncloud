@@ -30,7 +30,7 @@ def main [] {
   # literal parens in interpolated strings). Must exit 0 and print valid JSON.
   # VMU_SECRET_DRY keeps it from touching the keychain.
   print "==> recipe prepare.nu"
-  for f in (glob examples/*/prepare.nu) {
+  for f in (glob recipes/*/prepare.nu) {
     let r = (with-env { DOMAIN: "ci.example.com", VMU_SECRET_DRY: "1" } { ^nu $f } | complete)
     let valid_json = (try { ($r.stdout | from json | describe) starts-with "record" } catch { false })
     if (($r.exit_code != 0) or (not $valid_json)) { print $"   FAIL ($f):\n($r.stderr | str trim)"; $fails = ($fails | append $"run ($f)") }
@@ -38,7 +38,7 @@ def main [] {
 
   # Every recipe compose.yaml must be valid YAML.
   print "==> compose YAML"
-  for f in ((glob examples/*/compose.yaml) ++ ["compose.yaml" "caddy/compose.yaml"]) {
+  for f in ((glob recipes/*/compose.yaml) ++ ["compose.yaml" "caddy/compose.yaml"]) {
     let ok = (try { open $f | ignore; true } catch { false })
     if (not $ok) { print $"   FAIL ($f)"; $fails = ($fails | append $"yaml ($f)") }
   }

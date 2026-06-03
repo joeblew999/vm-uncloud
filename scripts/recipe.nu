@@ -1,5 +1,5 @@
 #!/usr/bin/env nu
-# Deploy a recipe by name. Resolves the repo's committed examples/ first, then
+# Deploy a recipe by name. Resolves the repo's committed recipes/ first, then
 # the upstream catalog in recipes.toml (cloned into .src/).
 #
 #   mise run recipe wordpress     # local example
@@ -21,9 +21,9 @@ def sources [] {
   (open recipes.toml | get sources? | default [])
 }
 
-# Find <recipe>/compose.yaml: committed examples/ first, then synced sources.
+# Find <recipe>/compose.yaml: committed recipes/ first, then synced sources.
 def find_recipe [recipe: string] {
-  let local = $"examples/($recipe)/compose.yaml"
+  let local = $"recipes/($recipe)/compose.yaml"
   if ($local | path exists) { return $local }
   for s in (sources) {
     let c = $".src/($s.name)/($recipe)/compose.yaml"
@@ -33,10 +33,10 @@ def find_recipe [recipe: string] {
 }
 
 def list_recipes [] {
-  print "  [examples] (this repo)"
-  if ("examples" | path exists) {
-    ls examples | where type == dir | get name | path basename
-      | where {|n| ($"examples/($n)/compose.yaml" | path exists)} | each {|n| print $"    - ($n)"}
+  print "  [recipes] (this repo)"
+  if ("recipes" | path exists) {
+    ls recipes | where type == dir | get name | path basename
+      | where {|n| ($"recipes/($n)/compose.yaml" | path exists)} | each {|n| print $"    - ($n)"}
   }
   for s in (sources) {
     let root = $".src/($s.name)"
@@ -50,7 +50,7 @@ def list_recipes [] {
 
 def main [recipe?: string] {
   load-env (r2-creds)   # so `tofu output` can read remote state
-  if ($recipe | is-not-empty) and not ($"examples/($recipe)/compose.yaml" | path exists) {
+  if ($recipe | is-not-empty) and not ($"recipes/($recipe)/compose.yaml" | path exists) {
     nu scripts/recipes-sync.nu
   }
   if ($recipe | is-empty) {
@@ -62,7 +62,7 @@ def main [recipe?: string] {
 
   let compose = (find_recipe $recipe)
   if ($compose | is-empty) {
-    print $"ERROR: recipe '($recipe)' not found in examples/ or any source. Available:"
+    print $"ERROR: recipe '($recipe)' not found in recipes/ or any source. Available:"
     list_recipes
     exit 1
   }

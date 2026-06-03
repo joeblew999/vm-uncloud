@@ -100,7 +100,7 @@ There is no registry to run. Uncloud embeds [unregistry](https://github.com/psvi
 
 ## Recipes
 
-`mise run recipe <name>` deploys a service by name, resolving the repo's committed [`examples/`](examples/) **first**, then the upstream catalog:
+`mise run recipe <name>` deploys a service by name, resolving the repo's committed [`recipes/`](recipes/) **first**, then the upstream catalog:
 
 ```bash
 mise run recipe            # list everything (local + upstream)
