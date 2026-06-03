@@ -27,6 +27,8 @@ WP_DOMAIN=wordpress.amplifycms.net mise run recipe wordpress-mariadb
 
 `recipe wordpress-mariadb` generates random DB credentials and injects `WP_DOMAIN` + `DB_*` as environment for the deploy. Uncloud's Caddy obtains a Let's Encrypt cert for the hostname automatically; browse to `https://wordpress.amplifycms.net` once the cert is issued (~30–60s).
 
+> ✅ **Verified end-to-end** on a real `cpx22`/`fsn1` box against `amplifycms.net`: `mise run up` → `recipe wordpress-mariadb` produced `https://wordpress.amplifycms.net` serving the WordPress installer over HTTP/2 with a valid Let's Encrypt cert (~80s to first cert), then `mise run down` removed the server, the A record, and the local context.
+
 ## How recipes are run (and why this way)
 
 Recipes ship as a **folder** (compose + `.env` + config files like `nats-server.conf`), so a single-file remote deploy won't work — Uncloud resolves those relative paths from the compose file's location. Cloning the folder into `.src/` and running `uc deploy -f .src/uncloud-recipes/<name>/compose.yaml` keeps upstream pristine and lets Uncloud find everything it needs. Add per-recipe env wiring in [`../scripts/recipe.nu`](../scripts/recipe.nu) as you adopt more.

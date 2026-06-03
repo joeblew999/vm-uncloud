@@ -1,13 +1,13 @@
 #cloud-config
-# Bootstraps a Hetzner box into a ready Uncloud machine on first boot.
-# Runs the official Uncloud machine installer (the same script `uc machine init`
-# uses over SSH) — installs Docker + the uncloudd daemon + systemd unit and
-# starts it. `uc machine init` then connects to bootstrap the cluster; the
-# install step is idempotent, so running both is safe.
+# Pre-installs the Uncloud machine bits on first boot: Docker + the uncloudd
+# daemon + systemd unit. Uses INSTALL_ONLY=true so the daemon is NOT started
+# yet — an uninitialised uncloudd has no cluster/WireGuard config and would
+# fail to start. `uc machine init` (over SSH) then starts and bootstraps it.
+# The installer is idempotent, so running it again during init is safe.
 package_update: true
 package_upgrade: false
 packages:
   - curl
   - ca-certificates
 runcmd:
-  - [ bash, -c, "curl -fsSL https://raw.githubusercontent.com/psviderski/uncloud/main/scripts/install.sh | bash" ]
+  - [ bash, -c, "curl -fsSL https://raw.githubusercontent.com/psviderski/uncloud/main/scripts/install.sh | INSTALL_ONLY=true bash" ]
