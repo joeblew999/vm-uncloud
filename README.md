@@ -103,11 +103,11 @@ There is no registry to run. Uncloud embeds [unregistry](https://github.com/psvi
 `mise run recipe <name>` deploys a service by name, resolving the repo's committed [`recipes/`](recipes/) **first**, then the upstream catalog:
 
 ```bash
-mise run recipe            # list everything (local + upstream)
+mise run recipe                  # list everything (local + upstream)
 mise run recipe wordpress        # WordPress + MariaDB at https://wordpress.<your-domain>
 mise run recipe imaginary        # libvips image API (h2non/imaginary) at https://img.<your-domain>
 mise run recipe moltis           # self-hosted AI agent server at https://moltis.<your-domain>
-mise run recipe wordpress-galera # EXPERIMENTAL — multi-master Galera WordPress (needs node_count>=3)
+mise run recipe wordpress-galera # EXPERIMENTAL — multi-master Galera WordPress (needs node_count >= 3)
 mise run recipe nats             # upstream catalog
 ```
 
@@ -157,7 +157,7 @@ mise run caddy:external
 
 ## Checks
 
-`mise run ci` runs `tofu fmt` + `validate` and parses every script. The same command runs on every push via [`.github/workflows/check.yml`](.github/workflows/check.yml) — a thin wrapper around `mise run ci`, no logic in the YAML.
+`mise run ci` runs `tofu fmt` + `validate`, parses every script, runs each recipe's `prepare.nu`, and parses every `compose.yaml`. The same command runs on every push via [`.github/workflows/check.yml`](.github/workflows/check.yml) — a thin wrapper around `mise run ci`, no logic in the YAML.
 
 ## Troubleshooting
 
