@@ -1,31 +1,22 @@
 # Examples
 
-`mise run recipe <name>` deploys a service by name, checking the **committed examples here first**, then the **upstream catalog** in [`../recipes.toml`](../recipes.toml) (cloned into `.src/` on demand). Local examples are visible, editable, and need no network at deploy time; the upstream catalog covers the long tail.
+Committed, ready-to-deploy recipes. `mise run recipe <name>` resolves a name **here first**, then the upstream catalog in [`../recipes.toml`](../recipes.toml) (cloned into `.src/` on demand).
 
 ```bash
-mise run recipe            # list everything (examples + upstream)
-mise run recipe wordpress  # deploy this repo's WordPress example
+mise run recipe            # list everything (local + upstream)
+mise run recipe wordpress  # deploy a local example
 ```
 
-## Local examples (this repo)
+## Local examples
 
-| Example | What | Notes |
-|---------|------|-------|
-| [`wordpress/`](wordpress/) | WordPress + MariaDB, HTTPS on your domain | Hostname auto-derives to `wordpress.<your-domain>`; DB creds generated; wildcard cert covers it. |
+| Example | What |
+|---------|------|
+| [`wordpress/`](wordpress/) | WordPress + MariaDB on `wordpress.<your-domain>`. Hostname is derived from the cluster domain (override with `WP_DOMAIN=...`), DB credentials are generated, and the wildcard cert covers it. |
 
-## Upstream catalog ([uncloud-recipes](https://github.com/psviderski/uncloud-recipes))
+## Upstream catalog
 
-`nats`, `postgres`, `wordpress-mariadb`, `uncloud-web-ui`, and more — deploy with `mise run recipe <name>`.
+[uncloud-recipes](https://github.com/psviderski/uncloud-recipes) — `nats`, `postgres`, `wordpress-mariadb`, `uncloud-web-ui`, and more. Add sources in [`../recipes.toml`](../recipes.toml).
 
-## WordPress demo
+## How a recipe runs
 
-```bash
-mise run up                 # cluster + *.​<domain> wildcard DNS + cert
-mise run recipe wordpress   # -> https://wordpress.<your-domain>
-```
-
-`recipe wordpress` deploys [`wordpress/compose.yaml`](wordpress/compose.yaml): it reads the cluster's domain from tofu state, publishes WordPress at `wordpress.<that-domain>` (override with `WP_DOMAIN=...`), injects generated `DB_*` credentials, and Uncloud's Caddy serves it with the existing wildcard cert — no per-host setup, no cert wait.
-
-## How it works
-
-Recipes ship as a folder (compose + any `.env`/config files). Uncloud resolves those relative paths from the compose file's location, so `recipe` runs `uc deploy -f <dir>/compose.yaml` from the right place. Per-recipe env wiring lives in [`../scripts/recipe.nu`](../scripts/recipe.nu); new upstream repos go in [`../recipes.toml`](../recipes.toml).
+A recipe is a folder (`compose.yaml` plus any `.env`/config files). `recipe` runs `uc deploy -f <dir>/compose.yaml` from the recipe's own directory so Uncloud resolves its relative files. Per-recipe env wiring — e.g. WordPress's hostname and DB credentials — lives in [`../scripts/recipe.nu`](../scripts/recipe.nu).

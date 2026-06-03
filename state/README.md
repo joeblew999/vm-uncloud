@@ -14,7 +14,7 @@ Events are written automatically by `up.nu`, `recipe.nu`, and `down.nu` via `log
 
 ```jsonc
 {"event":"up","cluster":"hetzner","ips":"167.233.52.142","server_type":"cpx22","location":"fsn1","fqdns":"*.amplifycms.net","ts":"2026-06-03T08:30:00+0000"}
-{"event":"deploy","cluster":"hetzner","service":"wordpress-mariadb","host":"wordpress.amplifycms.net","ts":"..."}
+{"event":"deploy","cluster":"hetzner","service":"wordpress","host":"wordpress.amplifycms.net","ts":"..."}
 {"event":"down","cluster":"hetzner","ts":"..."}
 ```
 
