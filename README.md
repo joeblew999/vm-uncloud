@@ -143,7 +143,7 @@ By default tofu state is local — fine for one operator, but it can't be shared
 mise run state:remote     # creates the vm-uncloud-tfstate bucket + migrates local state to R2
 ```
 
-Needs valid **R2 S3 credentials** in fnox: `AWS_ACCESS_KEY_ID` (32 chars) + `AWS_SECRET_ACCESS_KEY` (64 chars) from an R2 API token (Cloudflare → R2 → Manage API Tokens), plus `R2_ACCOUNT_ID`. The task refuses to run with malformed creds rather than half-migrating. `backend.tf`/`backend.hcl` are generated and gitignored.
+No separate R2 token needed — your **`CLOUDFLARE_API_TOKEN` is the R2 credential**: Cloudflare accepts `access_key_id = token id`, `secret = sha256(token)` for the R2 S3 API. `scripts/r2.nu` re-derives that at run time (nothing stored), and `up`/`down`/`status` load it automatically once the remote backend is active. Requirements: the token must have **R2 read/write** permission, and `CLOUDFLARE_ACCOUNT_ID` in fnox. `backend.tf`/`backend.hcl` are generated and gitignored.
 
 > **Heads-up — `hcloud` token vs project.** tofu authenticates with `HCLOUD_TOKEN` from fnox, which may target a *different* Hetzner project than your `hcloud` CLI context. Always verify with `fnox exec -- hcloud server list` (same token tofu uses), not a bare `hcloud server list`, or you'll be looking at the wrong project.
 

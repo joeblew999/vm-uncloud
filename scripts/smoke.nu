@@ -7,6 +7,7 @@ use r2.nu *
 
 const TOFU = ["-chdir=tofu"]
 const VARS = ["-var=cluster_name=uncloud-smoke" "-var=node_count=1"
+              "-var=ssh_key_name=gedw99_hetzner"
               "-var=domain=" "-var=cloudflare_zone_id="]
 
 def main [] {

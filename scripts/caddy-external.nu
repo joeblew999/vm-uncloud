@@ -8,8 +8,8 @@ def main [] {
   if not ($snippet | path exists) {
     print $"ERROR: ($snippet) not found."
     print "       cp caddy/external.caddyfile.example caddy/external.caddyfile and edit it."
-    print "       Reminder: each hostname needs a DNS A record at the ingress node"
-    print "       (add it to app_hostnames in tofu/terraform.tfvars and re-run 'mise run up')."
+    print "       Reminder: hostnames must be under your domain — the wildcard *.<domain>"
+    print "       record + cert already cover them, so no per-host DNS setup is needed."
     exit 1
   }
   print $"==> uc caddy deploy --caddyfile ($snippet)"

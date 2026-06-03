@@ -55,7 +55,7 @@ def main [recipe?: string] {
     "wordpress-mariadb" => {
       let domain = ($env.WP_DOMAIN? | default "")
       if ($domain | is-empty) {
-        print "ERROR: set WP_DOMAIN to a hostname you created in app_hostnames, e.g."
+        print "ERROR: set WP_DOMAIN to any subdomain under your domain (the wildcard covers it), e.g."
         print "  WP_DOMAIN=wordpress.amplifycms.net mise run recipe wordpress-mariadb"
         exit 1
       }

@@ -1,8 +1,8 @@
 # Secrets (HCLOUD_TOKEN, CLOUDFLARE_API_TOKEN) are NOT tofu variables — the
 # providers read them straight from the environment, injected by `fnox exec`.
 
-# Cloudflare zone the records live in. Leave empty to skip DNS entirely
-# (set app_hostnames = [] too) — useful for infra-only / smoke runs.
+# Cloudflare zone the records live in. Leave domain empty to skip DNS entirely
+# (no wildcard record, no Caddy) — useful for infra-only / smoke runs.
 variable "cloudflare_zone_id" {
   description = "Cloudflare Zone ID for your domain (empty = no DNS)"
   type        = string
