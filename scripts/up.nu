@@ -85,24 +85,14 @@ def main [] {
   print "  mise run status"
 }
 
-# Clear stale host keys (Hetzner recycles IPs), wait for SSH, then wait for
-# cloud-init to finish installing the uncloud daemon.
+# Wait for the box WITHOUT a poll loop:
+#   - ssh-keygen -R clears stale host keys (Hetzner recycles IPs);
+#   - ConnectionAttempts rides out the boot window (ssh's own retry, no sleep);
+#   - `cloud-init status --wait` then BLOCKS server-side and returns the instant
+#     cloud-init finishes — the box tells us it's ready, we don't poll for it.
 def prepare_host [ip: string, key: string] {
   ^ssh-keygen -R $ip out+err> /dev/null
-
-  print $"==> Waiting for SSH on ($ip)..."
-  mut tries = 0
-  loop {
-    let ok = (do {
-      ^ssh -i $key -o BatchMode=yes -o StrictHostKeyChecking=no -o ConnectTimeout=5 $"root@($ip)" true
-    } | complete | get exit_code) == 0
-    if $ok { break }
-    $tries = $tries + 1
-    if $tries >= 30 { print $"    WARNING: SSH to ($ip) not ready after ~5min."; return }
-    sleep 10sec
-  }
-
-  print $"==> Waiting for cloud-init to finish on ($ip)..."
-  ^ssh -i $key -o StrictHostKeyChecking=no $"root@($ip)" "cloud-init status --wait || true" out+err> /dev/null
+  print $"==> Waiting for ($ip): SSH up, then cloud-init done..."
+  ^ssh -i $key -o BatchMode=yes -o StrictHostKeyChecking=no -o ConnectTimeout=10 -o ConnectionAttempts=40 $"root@($ip)" "cloud-init status --wait || true" out+err> /dev/null
   print $"    ($ip) ready."
 }
