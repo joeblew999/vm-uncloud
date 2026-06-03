@@ -6,6 +6,8 @@
 # the keychain; the tofu providers read them straight from the environment.
 # SSH uses $SSH_KEY_FILE (default ~/.ssh/gedw99_hetzner).
 
+use r2.nu *
+
 const TOFU = ["-chdir=tofu"]
 
 def ssh_key_file [] {
@@ -13,6 +15,10 @@ def ssh_key_file [] {
 }
 
 def main [] {
+  # If remote (R2) state is active, derive its S3 creds from the CF token so
+  # every tofu command below can read/write state. No-op for local state.
+  load-env (r2-creds)
+
   if not ("tofu/terraform.tfvars" | path exists) {
     print "ERROR: tofu/terraform.tfvars not found."
     print "       cp tofu/terraform.tfvars.example tofu/terraform.tfvars and edit it."

@@ -15,12 +15,8 @@ type = "keychain"
 service = "fnox"
 
 [secrets]
-HCLOUD_TOKEN         = { provider = "keychain", value = "HCLOUD_TOKEN" }
-CLOUDFLARE_API_TOKEN = { provider = "keychain", value = "CLOUDFLARE_API_TOKEN" }
-
-# Remote tofu state in R2 (used by `mise run state:remote`). The S3 backend +
-# aws read AWS_*; R2_ACCOUNT_ID builds the endpoint. Point these at a valid R2
-# S3 token (Access Key ID = 32 chars, Secret = 64 chars).
-AWS_ACCESS_KEY_ID     = { provider = "keychain", value = "IRONMIND_R2_ACCESS_KEY_ID" }
-AWS_SECRET_ACCESS_KEY = { provider = "keychain", value = "IRONMIND_R2_SECRET_ACCESS_KEY" }
-R2_ACCOUNT_ID         = { provider = "keychain", value = "CLOUDFLARE_ACCOUNT_ID" }
+HCLOUD_TOKEN          = { provider = "keychain", value = "HCLOUD_TOKEN" }
+CLOUDFLARE_API_TOKEN  = { provider = "keychain", value = "CLOUDFLARE_API_TOKEN" }
+# Used to build the R2 endpoint and to derive R2 S3 creds from the CF token
+# (token id = access key, sha256(token) = secret). No separate R2 token needed.
+CLOUDFLARE_ACCOUNT_ID = { provider = "keychain", value = "CLOUDFLARE_ACCOUNT_ID" }

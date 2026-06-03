@@ -1,9 +1,12 @@
 #!/usr/bin/env nu
 # Show infra + cluster state at a glance.
 
+use r2.nu *
+
 const TOFU = ["-chdir=tofu"]
 
 def main [] {
+  load-env (r2-creds)   # R2 state creds (no-op for local state)
   print "=== Infrastructure (OpenTofu) ==="
   let out = (^tofu ...$TOFU output -json | complete)
   if $out.exit_code == 0 {

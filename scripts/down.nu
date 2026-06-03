@@ -5,9 +5,12 @@
 #
 # Non-interactive: set FORCE=1 (or UNCLOUD_AUTO_CONFIRM=1) to skip the prompt.
 
+use r2.nu *
+
 const TOFU = ["-chdir=tofu"]
 
 def main [] {
+  load-env (r2-creds)   # R2 state creds (no-op for local state)
   let forced = (($env.FORCE? | default "") != "") or (($env.UNCLOUD_AUTO_CONFIRM? | default "") != "")
   if not $forced {
     let expected = (^tofu ...$TOFU output -raw cluster_name | complete | get stdout | str trim)
