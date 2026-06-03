@@ -133,3 +133,14 @@ cp caddy/external.caddyfile.example caddy/external.caddyfile
 $EDITOR caddy/external.caddyfile
 mise run caddy:external
 ```
+
+## Troubleshooting
+
+**HTTPS cert doesn't come up (`tlsv1 alert internal error`, `000` on :443).** Caddy is fine (`:80` answers, the service shows its endpoint in `uc ls`) — it just hasn't obtained the Let's Encrypt cert yet. Normal issuance is ~30–60s. Causes of delay/failure:
+- **Let's Encrypt rate limits** from rapid `up`/`down` cycles against the *same* hostname (e.g. while testing). Cert state lives in Caddy's Docker volume and is discarded on teardown, so every fresh cluster re-requests. LE allows 5 duplicate certs per hostname per week and throttles repeated failed validations with exponential backoff — Caddy keeps retrying. Fix: wait, use a throwaway hostname, or point at LE staging while iterating.
+- **DNS not yet visible to LE.** The `A` record must resolve publicly before the HTTP-01 challenge can pass. Check with `dig +short <host> @1.1.1.1`. (Note: macOS may *negative-cache* a name from before the record existed — `curl` then fails to resolve even though `dig` works. `sudo dscacheutil -flushcache` or test with `curl --resolve <host>:443:<ip>`.)
+- Inspect the real reason on the box: `docker logs $(docker ps -qf name=caddy) 2>&1 | grep -iE 'acme|obtain|error'`.
+
+**`uc machine init` errors with `could not open TTY`.** Its progress UI needs a real terminal. Run `mise run up` from an interactive shell, not a headless/CI context (the scripts already pass `-y`).
+
+**`context not found` on deploy/recipe/down.** The cluster context must match `$UNCLOUD_CONTEXT` (default `hetzner`). `mise run up` creates it with the right name via `--context`; if you ran `uc machine init` by hand, pass `--context hetzner`.
