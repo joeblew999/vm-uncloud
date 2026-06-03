@@ -22,7 +22,10 @@ def main [] {
   print "==> tofu init"
   ^tofu ...$TOFU init -input=false
 
-  print "==> tofu apply (Hetzner server + cloud-init + Cloudflare DNS)"
+  # tofu apply blocks until the box is fully READY: its remote-exec provisioner
+  # waits for SSH (native connection retry) then `cloud-init status --wait`.
+  # No sleep/poll here — when this returns, the machine is ready for init.
+  print "==> tofu apply (server + DNS + waits for cloud-init via provisioner)"
   ^tofu ...$TOFU apply -auto-approve -input=false
 
   let out = (^tofu ...$TOFU output -json | from json)
@@ -33,7 +36,9 @@ def main [] {
   if ($domain | is-not-empty) { print $"==> Wildcard: ($wildcard) -> ($ips | get 0)" }
 
   let key = (ssh_key_file)
-  for ip in $ips { prepare_host $ip $key }
+  # Clear stale host keys (Hetzner recycles IPs) so client-side `uc machine init`
+  # doesn't trip on a mismatched known_hosts entry. One-shot, not a poll.
+  for ip in $ips { ^ssh-keygen -R $ip out+err> /dev/null }
 
   # Context name MUST match $UNCLOUD_CONTEXT — `uc machine init` does NOT read
   # that env var (it defaults the new context to "default"), so we pass it
@@ -83,16 +88,4 @@ def main [] {
   }
   print "  mise run deploy    # apply compose.yaml"
   print "  mise run status"
-}
-
-# Wait for the box WITHOUT a poll loop:
-#   - ssh-keygen -R clears stale host keys (Hetzner recycles IPs);
-#   - ConnectionAttempts rides out the boot window (ssh's own retry, no sleep);
-#   - `cloud-init status --wait` then BLOCKS server-side and returns the instant
-#     cloud-init finishes — the box tells us it's ready, we don't poll for it.
-def prepare_host [ip: string, key: string] {
-  ^ssh-keygen -R $ip out+err> /dev/null
-  print $"==> Waiting for ($ip): SSH up, then cloud-init done..."
-  ^ssh -i $key -o BatchMode=yes -o StrictHostKeyChecking=no -o ConnectTimeout=10 -o ConnectionAttempts=40 $"root@($ip)" "cloud-init status --wait || true" out+err> /dev/null
-  print $"    ($ip) ready."
 }

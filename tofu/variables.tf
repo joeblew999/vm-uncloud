@@ -60,6 +60,12 @@ variable "ssh_key_name" {
   type        = string
 }
 
+variable "ssh_private_key_file" {
+  description = "Local private key path for the readiness provisioner (matches ssh_key_name)"
+  type        = string
+  default     = "~/.ssh/gedw99_hetzner"
+}
+
 variable "ssh_allowed_ips" {
   description = "CIDRs allowed to SSH in (default: anywhere — tighten to your IP)"
   type        = list(string)

@@ -86,6 +86,23 @@ resource "hcloud_server" "node" {
     managed_by = "vm-uncloud"
     cluster    = var.cluster_name
   }
+
+  # Readiness wait lives HERE, in tofu — not in a shell poll loop. Terraform's
+  # connection block retries SSH natively until the box is reachable, then
+  # `cloud-init status --wait` BLOCKS server-side until cloud-init finishes.
+  # So `tofu apply` returns only when the machine is actually ready for
+  # `uc machine init`. (`|| true`: wait regardless of cloud-init's exit status —
+  # the real install is done by uc; we only need to know it's finished.)
+  connection {
+    type        = "ssh"
+    host        = self.ipv4_address
+    user        = "root"
+    private_key = file(pathexpand(var.ssh_private_key_file))
+    timeout     = "5m"
+  }
+  provisioner "remote-exec" {
+    inline = ["cloud-init status --wait || true"]
+  }
 }
 
 # One wildcard A record: *.<domain> -> the ingress node. Every subdomain

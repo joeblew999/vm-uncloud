@@ -41,6 +41,7 @@ Uncloud installs itself onto a fresh Linux box **over SSH** — you never copy b
 |-------|------|--------------|
 | Your machine | `uncloud` CLI (`uc`), `docker-pussh` | `mise run setup` |
 | Hetzner box | Docker + `uncloudd` | `cloud-init/uncloud.yaml` on first boot |
+| Hetzner box | readiness gate (SSH up + cloud-init done) | tofu `remote-exec` provisioner — `apply` blocks until ready, **no shell polling** |
 | Hetzner box | WireGuard mesh, cluster | `uc machine init` over SSH |
 | Hetzner box | Wildcard/DNS-01 Caddy ingress | `caddy/compose.yaml` (deployed by `up`) |
 | Cloudflare | `*.<domain>` wildcard `A` record | OpenTofu |
