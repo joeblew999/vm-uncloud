@@ -13,7 +13,7 @@ Three layers of truth, smallest-lived first:
 Events are written automatically by `up.nu`, `recipe.nu`, and `down.nu` via `log.nu` (typed subcommands). Each line is one JSON object with an auto `ts`:
 
 ```jsonc
-{"event":"up","cluster":"hetzner","ips":"167.233.52.142","server_type":"cpx22","location":"fsn1","fqdns":"wordpress.amplifycms.net","ts":"2026-06-03T08:30:00+0000"}
+{"event":"up","cluster":"hetzner","ips":"167.233.52.142","server_type":"cpx22","location":"fsn1","fqdns":"*.amplifycms.net","ts":"2026-06-03T08:30:00+0000"}
 {"event":"deploy","cluster":"hetzner","service":"wordpress-mariadb","host":"wordpress.amplifycms.net","ts":"..."}
 {"event":"down","cluster":"hetzner","ts":"..."}
 ```

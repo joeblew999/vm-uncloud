@@ -1,8 +1,13 @@
-# Example service. Replace app.example.com with a hostname you created in
-# tofu/terraform.tfvars (app_hostnames) — it must already point at the ingress node.
-# Caddy obtains a Let's Encrypt cert for it automatically on first request.
+# Default example: a public image on your domain. Any subdomain under your
+# domain works out of the box — the wildcard *.<domain> record + wildcard cert
+# (issued at cluster bring-up) already cover it. Just change the hostname.
+#
+#   mise run deploy        # deploys this
+#
+# To ship your OWN app, give the service a `build:` section instead of `image:`
+# and `mise run deploy` builds locally + pushes only changed layers + rolls out.
 services:
   whoami:
     image: traefik/whoami:latest
     x-ports:
-      - app.example.com:80/https
+      - app.amplifycms.net:80/https

@@ -7,8 +7,9 @@
 # These names match the existing keychain items shared across repos (see
 # joeblew999/vm-servers) — they ARE the cross-repo contract, do not rename:
 #   - HCLOUD_TOKEN          : read natively by `hcloud` AND the tofu hcloud provider
-#   - CLOUDFLARE_API_TOKEN  : read natively by the tofu cloudflare provider
-# So no TF_VAR_* indirection is needed — the providers pick these up from env.
+#   - CLOUDFLARE_API_TOKEN  : read natively by the tofu cloudflare provider; also
+#                             derives the R2 S3 creds for remote state (scripts/r2.nu)
+# The providers read these straight from the environment — no extra wiring.
 
 [providers.keychain]
 type = "keychain"
