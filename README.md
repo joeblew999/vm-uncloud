@@ -105,6 +105,7 @@ There is no registry to run. Uncloud embeds [unregistry](https://github.com/psvi
 ```bash
 mise run recipe            # list everything (local + upstream)
 mise run recipe wordpress  # local example — WordPress + MariaDB at https://wordpress.<your-domain>
+mise run recipe imgproxy   # local example — libvips image transforms at https://img.<your-domain>
 mise run recipe nats       # upstream catalog
 ```
 

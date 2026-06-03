@@ -52,6 +52,12 @@ def wp_domain [] {
   if ($dom | is-empty) { "" } else { $"wordpress.($dom)" }
 }
 
+# n-char hex string, for signing keys.
+def randhex [n: int] {
+  let h = ["0" "1" "2" "3" "4" "5" "6" "7" "8" "9" "a" "b" "c" "d" "e" "f"]
+  (1..$n | each {|_| $h | get (random int 0..15) } | str join)
+}
+
 def main [recipe?: string] {
   load-env (r2-creds)   # so `tofu output` can read remote state
   # Sync upstream only if the recipe isn't a local example (saves a clone).
@@ -72,33 +78,45 @@ def main [recipe?: string] {
     exit 1
   }
 
+  # DOMAIN is injected for any recipe whose compose uses ${DOMAIN}.
+  let dom = (cluster-domain)
+  mut envs = (if ($dom | is-empty) { {} } else { { DOMAIN: $dom } })
+  mut host = ""   # public hostname, for the ledger
+
   # Per-recipe env wiring.
-  let envs = (if ($recipe | str starts-with "wordpress") {
-    let domain = (wp_domain)
-    if ($domain | is-empty) {
-      print "ERROR: no domain found. Either bring up a cluster with a domain (mise run up),"
-      print "       or set WP_DOMAIN=host.example.com explicitly."
+  if ($recipe | str starts-with "wordpress") {
+    let wd = (wp_domain)
+    if ($wd | is-empty) {
+      print "ERROR: no domain. Run 'mise run up' first, or set WP_DOMAIN=host.example.com."
       exit 1
     }
-    print $"==> WordPress will be published at https://($domain)"
-    {
-      WP_DOMAIN: $domain
-      DB_USER: "wordpress"
-      DB_NAME: "wordpress"
-      DB_PASSWORD: (random chars --length 24)
-      DB_ROOT_PASSWORD: (random chars --length 24)
-    }
-  } else { {} })
+    $host = $wd
+    $envs = ($envs | merge {
+      WP_DOMAIN: $wd, DB_USER: "wordpress", DB_NAME: "wordpress",
+      DB_PASSWORD: (random chars --length 24), DB_ROOT_PASSWORD: (random chars --length 24)
+    })
+  } else if ($recipe == "imgproxy") {
+    if ($dom | is-empty) { print "ERROR: no domain. Run 'mise run up' first (imgproxy publishes on img.<domain>)."; exit 1 }
+    $host = $"img.($dom)"
+    let key = ($env.IMGPROXY_KEY? | default (randhex 64))
+    let salt = ($env.IMGPROXY_SALT? | default (randhex 64))
+    print $"==> imgproxy signing key:  ($key)"
+    print $"==> imgproxy signing salt: ($salt)"
+    print "    save these — you need them to sign image URLs"
+    $envs = ($envs | merge { IMGPROXY_KEY: $key, IMGPROXY_SALT: $salt })
+  }
+  if ($host | is-not-empty) { print $"==> publishing at https://($host)" }
 
   print $"==> uc deploy -f ($compose) -y"
   with-env $envs { ^uc deploy -f $compose -y }
 
-  # Ledger (best-effort). Omit --host when empty.
+  # Ledger (best-effort). Omit --host when empty. Copy to immutables — a closure
+  # can't capture `mut` vars.
   let cluster = ($env.UNCLOUD_CONTEXT? | default "")
-  let host = ($envs.WP_DOMAIN? | default "")
+  let pub = $host
   do {
     let base = [deploy --cluster $cluster --service $recipe]
-    let args = (if ($host | is-empty) { $base } else { $base | append [--host $host] })
+    let args = (if ($pub | is-empty) { $base } else { $base | append [--host $pub] })
     nu state/log.nu ...$args
   } | ignore
 

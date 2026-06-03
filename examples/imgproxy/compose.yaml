@@ -1,0 +1,24 @@
+# imgproxy — fast on-the-fly image transforms backed by libvips. Resize, crop,
+# convert, optimise via URL. Published at https://img.<your-domain>.
+#
+#   mise run recipe imgproxy
+#
+# IMGPROXY_KEY/SALT (hex) sign URLs so it isn't an open proxy. scripts/recipe.nu
+# uses your $IMGPROXY_KEY/$IMGPROXY_SALT if set, otherwise generates a pair and
+# prints them (save them — you need them to sign URLs). To serve source images
+# from Cloudflare R2, uncomment the S3 block.
+services:
+  imgproxy:
+    image: darthsim/imgproxy:latest
+    environment:
+      IMGPROXY_KEY: ${IMGPROXY_KEY}
+      IMGPROXY_SALT: ${IMGPROXY_SALT}
+      IMGPROXY_USE_ETAG: "true"
+      IMGPROXY_ENABLE_WEBP_DETECTION: "true"
+      # Serve source images from R2 (S3-compatible):
+      # IMGPROXY_USE_S3: "true"
+      # IMGPROXY_S3_ENDPOINT: "https://<account>.r2.cloudflarestorage.com"
+      # AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      # AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+    x-ports:
+      - img.${DOMAIN}:8080/https
