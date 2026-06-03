@@ -1,0 +1,19 @@
+# fnox secrets contract for vm-uncloud.
+#
+# Secret VALUES live in the macOS keychain (service: "fnox"); this file is just
+# the pointer table mapping env-var names → keychain item names. Safe to commit.
+# `fnox exec -- <cmd>` (wrapped by the mise tasks) injects them at run time.
+#
+# These names match the existing keychain items shared across repos (see
+# joeblew999/vm-servers) — they ARE the cross-repo contract, do not rename:
+#   - HCLOUD_TOKEN          : read natively by `hcloud` AND the tofu hcloud provider
+#   - CLOUDFLARE_API_TOKEN  : read natively by the tofu cloudflare provider
+# So no TF_VAR_* indirection is needed — the providers pick these up from env.
+
+[providers.keychain]
+type = "keychain"
+service = "fnox"
+
+[secrets]
+HCLOUD_TOKEN         = { provider = "keychain", value = "HCLOUD_TOKEN" }
+CLOUDFLARE_API_TOKEN = { provider = "keychain", value = "CLOUDFLARE_API_TOKEN" }

@@ -1,0 +1,19 @@
+# Copy to terraform.tfvars and fill in. This file holds NON-secret config only.
+# (terraform.tfvars is gitignored.) Secrets come from fnox: hcloud_token and
+# cloudflare_api_token are injected as TF_VAR_* by `mise run up`.
+
+# --- Cloudflare ---
+cloudflare_zone_id = "your-zone-id-here"   # Cloudflare dashboard -> your domain -> API (right sidebar)
+domain             = "example.com"
+app_hostnames      = ["app"]               # creates app.example.com -> ingress node
+
+# --- Hetzner ---
+cluster_name = "uncloud"
+node_count   = 1                            # bump to 3 for a WireGuard mesh
+server_type  = "cpx22"                      # x86 2vCPU/4GB; cax11 for ARM. `hcloud server-type list`
+image        = "ubuntu-24.04"
+location     = "fsn1"                       # fsn1/nbg1/hel1/ash/hil/sin
+ssh_key_name = "gedw99_hetzner"             # name of an SSH key already in your Hetzner project
+
+# Tighten this to your own IP for a private SSH surface, e.g. ["203.0.113.4/32"]
+# ssh_allowed_ips = ["0.0.0.0/0", "::/0"]

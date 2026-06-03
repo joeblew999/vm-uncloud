@@ -1,0 +1,94 @@
+#:schema https://mise.jdx.dev/schema/mise.json
+# vm-uncloud — one-command Uncloud cluster on Hetzner with your own Cloudflare domain.
+#
+# Flow:  mise run setup   (once)  -> install the uncloud CLI + docker-pussh locally
+#        mise run up               -> tofu apply (Hetzner box + Cloudflare DNS) + uc machine init
+#        mise run deploy           -> uc deploy compose.yaml
+#        mise run down             -> tofu destroy (server + DNS records, clean)
+#
+# Secrets come from fnox (keychain) -> mise tasks. Never hand-edit a .env / .tfvars file.
+
+[tools]
+opentofu = "1.10.7"
+hcloud   = "1.51.0"
+"github:nushell/nushell[exe=nu]" = "0.108.0"
+
+[env]
+# Cluster context name `uc` uses.
+UNCLOUD_CONTEXT = "hetzner"
+TF_IN_AUTOMATION = "1"
+# SSH access to the Hetzner machines — matches the key name in your Hetzner
+# project and the local private key path (same contract as vm-servers).
+SSH_KEY      = "gedw99_hetzner"
+SSH_KEY_FILE = "~/.ssh/gedw99_hetzner"
+
+# ---------------------------------------------------------------------------
+# Setup — install the two LOCAL binaries Uncloud needs. Everything server-side
+# is pushed over SSH by `uc machine init`, so this is all that runs on your box.
+# ---------------------------------------------------------------------------
+[tasks.setup]
+description = "Install the uncloud CLI (uc) + docker-pussh plugin locally"
+run = "nu scripts/setup.nu"
+
+# ---------------------------------------------------------------------------
+# Lifecycle — every task is wrapped in `fnox exec` so HCLOUD_TOKEN and
+# CLOUDFLARE_API_TOKEN are injected from the keychain (never disk); the tofu
+# providers and `hcloud` read them straight from the environment.
+# ---------------------------------------------------------------------------
+[tasks.up]
+description = "Provision Hetzner VPS + Cloudflare DNS, then init the Uncloud cluster"
+run = "fnox exec -- nu scripts/up.nu"
+
+[tasks.deploy]
+description = "Deploy services from compose.yaml to the cluster"
+run = "fnox exec -- nu scripts/deploy.nu"
+
+[tasks.down]
+description = "Destroy the server and remove its Cloudflare DNS records"
+run = "fnox exec -- nu scripts/down.nu"
+
+[tasks.status]
+description = "Show machines, services, and the resolved cluster domain"
+run = "fnox exec -- nu scripts/status.nu"
+
+[tasks."caddy:external"]
+description = "Front non-container services (bare metal/BMC/home hub) via managed Caddy"
+run = "fnox exec -- nu scripts/caddy-external.nu"
+
+# Deploy a ready-made recipe from psviderski/uncloud-recipes, e.g.
+#   mise run recipe wordpress-mariadb
+# Clones the recipes into .src/ (gitignored) on first use. See examples/.
+[tasks.recipe]
+description = "Deploy a named recipe from uncloud-recipes (e.g. wordpress-mariadb)"
+run = "fnox exec -- nu scripts/recipe.nu"
+
+# ---------------------------------------------------------------------------
+# Hidden tasks — used by tooling/verification, not part of the day-to-day flow.
+# Still runnable by name (mise run tofu:plan), just not listed in `mise tasks`.
+# ---------------------------------------------------------------------------
+[tasks."tofu:plan"]
+description = "Preview infrastructure changes without applying"
+hide = true
+run = "fnox exec -- tofu -chdir=tofu plan"
+
+[tasks."recipes:sync"]
+description = "Shallow-clone/update uncloud-recipes into .src/"
+hide = true
+run = "nu scripts/recipes-sync.nu"
+
+[tasks.smoke]
+description = "CI check: tofu apply+destroy a throwaway box (infra only, no DNS, no uncloud)"
+hide = true
+run = "fnox exec -- nu scripts/smoke.nu"
+
+# ---------------------------------------------------------------------------
+# Secrets — one-time keychain population. Run these once per machine.
+#   mise run secrets:set   then paste each token.
+# ---------------------------------------------------------------------------
+[tasks."secrets:set"]
+description = "Seed HCLOUD_TOKEN + CLOUDFLARE_API_TOKEN in the keychain (skip if already set)"
+run = """
+echo "These are shared keychain items (service: fnox). If 'fnox get' shows a value, you're done."
+fnox get HCLOUD_TOKEN >/dev/null 2>&1         && echo "HCLOUD_TOKEN: already set"         || fnox set -p keychain HCLOUD_TOKEN
+fnox get CLOUDFLARE_API_TOKEN >/dev/null 2>&1 && echo "CLOUDFLARE_API_TOKEN: already set" || fnox set -p keychain CLOUDFLARE_API_TOKEN
+"""

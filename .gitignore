@@ -1,0 +1,22 @@
+# Secrets never live on disk — they come from fnox/keychain.
+.env
+*.tfvars
+*.auto.tfvars
+
+# OpenTofu / Terraform state and local provider cache.
+tofu/.terraform/
+tofu/.terraform.lock.hcl
+tofu/*.tfstate
+tofu/*.tfstate.*
+tofu/crash.log
+tofu/override.tf
+tofu/override.tf.json
+
+# Live Caddy snippet (may contain internal IPs) — keep only the .example template.
+caddy/external.caddyfile
+
+# Upstream recipes are referenced, not vendored — cloned on demand by `mise run recipe`.
+.src/
+
+# Local scratch.
+.DS_Store

@@ -1,0 +1,8 @@
+# Example service. Replace app.example.com with a hostname you created in
+# tofu/terraform.tfvars (app_hostnames) — it must already point at the ingress node.
+# Caddy obtains a Let's Encrypt cert for it automatically on first request.
+services:
+  whoami:
+    image: traefik/whoami:latest
+    x-ports:
+      - app.example.com:80/https

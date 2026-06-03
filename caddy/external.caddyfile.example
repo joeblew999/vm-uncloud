@@ -1,0 +1,25 @@
+# External services — reverse-proxy things that run OUTSIDE the uncloud cluster
+# (bare-metal hosts, BMC controllers, NAS panels, home hubs, your revit-vm box)
+# through uncloud's managed Caddy, with automatic HTTPS on your own domain.
+#
+# Copy to caddy/external.caddyfile, edit, then:  mise run caddy:external
+# (runs `uc caddy deploy --caddyfile caddy/external.caddyfile`)
+#
+# Each hostname must have a DNS A record pointing at the ingress node — add it to
+# app_hostnames in tofu/terraform.tfvars and `mise run up`, or create it manually.
+# The cluster nodes must be able to reach the target IP (same LAN, VPN, etc.).
+
+# Plain HTTP upstream (e.g. HomeAssistant on a dedicated host):
+home.example.com {
+  reverse_proxy 192.168.1.10:8123
+}
+
+# HTTPS upstream with a self-signed cert (e.g. a BMC: TuringPi / iDRAC / iLO):
+bmc.example.com {
+  reverse_proxy https://192.168.1.75 {
+    transport http {
+      tls_insecure_skip_verify
+    }
+  }
+  log
+}
