@@ -123,6 +123,18 @@ mise run push your/api:1.2.3  # uc image push <image>
 
 Local Docker (e.g. [OrbStack](https://orbstack.dev) on a Mac) is only the daemon `uc build` uses — the push is `uc`'s own, no plugin.
 
+### How the registry works (there isn't one)
+
+There's **no registry to run or pay for**. uncloud embeds [unregistry](https://github.com/psviderski/unregistry) — "rsync for Docker images." When you push, `uc`:
+
+1. opens an SSH tunnel to each target machine,
+2. starts a **temporary** unregistry container there,
+3. `docker push`es through the tunnel, transferring **only the layers the machine doesn't already have**,
+4. the image lands directly in the machine's image store, instantly usable,
+5. tears the temporary container down.
+
+This works because `uc machine init` installs Docker with the **containerd image store** enabled (`containerd-snapshotter`), so pushed images are usable with no extra `docker pull`. (That's also why `cloud-init` here does *not* pre-install Docker — letting `uc` install it fresh guarantees the containerd store is on.) On multi-node clusters the push goes to every machine that runs the service. Nothing persistent, no external registry, no credentials to manage.
+
 **Where apps live:** keep the `compose.yaml` + `Dockerfile` in the app's own repo and target the cluster with `uc deploy -c hetzner` (or `UNCLOUD_CONTEXT`). `vm-uncloud` is the platform; apps deploy onto it.
 
 ## Where do apps live? (this repo vs yours)
