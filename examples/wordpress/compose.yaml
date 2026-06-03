@@ -1,0 +1,36 @@
+# WordPress + MariaDB — the flagship demo. Published on https://wordpress.<your-domain>
+# using the cluster's wildcard cert (any subdomain just works). Deploy with:
+#
+#   mise run recipe wordpress        # WP_DOMAIN auto-derives to wordpress.<your-domain>
+#
+# DB credentials are generated and injected by scripts/recipe.nu — nothing secret
+# is committed here. Adapted from psviderski/uncloud-recipes/wordpress-mariadb.
+services:
+  mariadb:
+    image: mariadb:12
+    environment:
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MARIADB_DATABASE: ${DB_NAME}
+      MARIADB_USER: ${DB_USER}
+      MARIADB_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - mariadb_data:/var/lib/mysql
+
+  wordpress:
+    image: wordpress:6.8
+    depends_on:
+      - mariadb
+    # Wildcard cert covers this hostname — no per-host TLS setup.
+    x-ports:
+      - ${WP_DOMAIN}:80/https
+    environment:
+      WORDPRESS_DB_HOST: mariadb:3306
+      WORDPRESS_DB_USER: ${DB_USER}
+      WORDPRESS_DB_PASSWORD: ${DB_PASSWORD}
+      WORDPRESS_DB_NAME: ${DB_NAME}
+    volumes:
+      - wordpress_data:/var/www/html
+
+volumes:
+  mariadb_data:
+  wordpress_data:

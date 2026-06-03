@@ -99,19 +99,29 @@ docker pussh your/api:latest root@<node-ip>   # push private images, no registry
 
 This repo is the **platform** — it stands up clusters and knows how to deploy onto them. It is *not* where your apps live:
 
-- **Demo/recipe apps** (like WordPress) are **referenced, never vendored.** `mise run recipe <name>` pulls them from upstream recipe repos into `.src/` (gitignored) at deploy time. Nothing app-specific is committed here.
-- **Your real apps** keep their own `compose.yaml` in their own repo, and you deploy it with `uc deploy -f path/to/compose.yaml` (or copy this repo's `deploy` pattern). Keeps the platform reusable and your app history with the app.
+- **Example apps** (like WordPress) live in [`examples/`](examples/) — committed, visible, yours to edit.
+- **Your real apps** keep their own `compose.yaml` in their own repo, deployed with `uc deploy -f path/to/compose.yaml`. Keeps the platform reusable and your app history with the app.
 
-## Examples (recipes)
-
-Ready-made services from recipe repos — see [`examples/`](examples/):
+## Demo: WordPress in two commands
 
 ```bash
-mise run recipe                     # list available recipes
-mise run recipe wordpress-mariadb   # deploy one
+mise run up                 # cluster + wildcard DNS/cert on your domain
+mise run recipe wordpress   # WordPress + MariaDB, published at https://wordpress.<your-domain>
 ```
 
-**Adding more is one line.** Recipe sources live in [`recipes.toml`](recipes.toml) — a list of git repos laid out as `<name>/compose.yaml`. `recipe` clones each into `.src/` and searches them in order, so you can mix the upstream [uncloud-recipes](https://github.com/psviderski/uncloud-recipes) with your own:
+That's it — `recipe wordpress` deploys [`examples/wordpress/compose.yaml`](examples/wordpress/compose.yaml), auto-derives the hostname (`wordpress.<your-domain>`) from the cluster, generates DB credentials, and the wildcard cert already covers it. Browse to `https://wordpress.<your-domain>`. Override the hostname with `WP_DOMAIN=blog.<your-domain> mise run recipe wordpress` if you like.
+
+## Recipes
+
+`mise run recipe <name>` deploys by name, checking this repo's committed [`examples/`](examples/) **first**, then the upstream catalog:
+
+```bash
+mise run recipe            # list everything available (examples + upstream)
+mise run recipe wordpress  # local example
+mise run recipe nats       # upstream catalog
+```
+
+**Adding more is one line.** Upstream sources live in [`recipes.toml`](recipes.toml) — git repos laid out as `<name>/compose.yaml`, cloned into `.src/` on demand. Mix the upstream [uncloud-recipes](https://github.com/psviderski/uncloud-recipes) with your own:
 
 ```toml
 [[sources]]
