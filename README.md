@@ -2,7 +2,7 @@
 
 **Spin up an [Uncloud](https://github.com/psviderski/uncloud) cluster on a Hetzner VPS, served on your own Cloudflare domain — with three commands.**
 
-It provisions the server, points your domain at it, installs Uncloud, and deploys your apps. Tear it all down just as fast. Glued together with `mise` + `nushell`, secrets from `fnox`/keychain. **The only thing you need on your machine is [`mise`](https://mise.jdx.dev)** — no local Docker.
+It provisions the server, points your domain at it, installs Uncloud, and deploys your apps. Tear it all down just as fast. Glued together with `mise` + `nushell`, secrets from `fnox`/keychain. **The only hard requirement on your machine is [`mise`](https://mise.jdx.dev)** — plus local Docker (e.g. [OrbStack](https://orbstack.dev) on a Mac) *if* you build and push your own images.
 
 ```bash
 mise install        # fetches opentofu, hcloud, nushell, fnox
@@ -52,9 +52,14 @@ WireGuard ships in the kernel; `corrosion` (cluster state) is bundled in `unclou
 
 The only thing you install on your machine is **[mise](https://mise.jdx.dev)**. `mise install` pins and fetches everything else — `opentofu`, `hcloud`, `nushell`, `fnox` — and `mise run setup` adds the `uncloud` CLI (`uc`). (`git`, `ssh`, and `curl` are assumed — every dev box has them.)
 
-**No local Docker needed here.** This repo deploys to a *remote* Hetzner box — it pulls the images, runs the containers, and `uc` just drives it over SSH. Docker on your laptop is only for the optional `docker pussh` (pushing locally-built images to the box without a registry).
+**Local Docker is optional, and only for building your own images.** Public-image recipes (the WordPress demo, etc.) need no local Docker — the Hetzner box pulls them. But to ship *your own* app you build it locally and push it straight to the box with `docker pussh` (unregistry — no registry, only the missing layers transfer):
 
-> Want a **local** cluster instead? Uncloud machines are Linux, so on a Mac you can run one in [OrbStack](https://orbstack.dev) (or Docker Desktop / Colima), or spin up throwaway local clusters with `ucind` — see the [Uncloud docs](https://uncloud.run/docs). `vm-uncloud` is specifically the remote-Hetzner + Cloudflare flavor.
+```shell
+docker build --platform linux/amd64 -t myapp:1.2.3 .
+docker pussh myapp:1.2.3 root@<node-ip>
+```
+
+On a Mac, **[OrbStack](https://orbstack.dev)** (or Docker Desktop / Colima) is the local Docker daemon that does the `build` step — this is the dev loop Uncloud documents.
 
 You provide: a **Cloudflare** zone + API token (`Zone:DNS:Edit`, plus R2 if you want remote state), and a **Hetzner** project + an SSH key.
 
