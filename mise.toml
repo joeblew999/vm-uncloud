@@ -1,7 +1,7 @@
 #:schema https://mise.jdx.dev/schema/mise.json
 # vm-uncloud — one-command Uncloud cluster on Hetzner with your own Cloudflare domain.
 #
-# Flow:  mise run setup   (once)  -> install the uncloud CLI + docker-pussh locally
+# Flow:  mise run setup   (once)  -> install the uncloud CLI locally
 #        mise run up               -> tofu apply (Hetzner box + Cloudflare DNS) + uc machine init
 #        mise run deploy           -> uc deploy compose.yaml
 #        mise run down             -> tofu destroy (server + DNS records, clean)
@@ -28,7 +28,7 @@ SSH_KEY_FILE = "~/.ssh/gedw99_hetzner"
 # is pushed over SSH by `uc machine init`, so this is all that runs on your box.
 # ---------------------------------------------------------------------------
 [tasks.setup]
-description = "Install the uncloud CLI (uc) + docker-pussh plugin locally"
+description = "Install the uncloud CLI (uc) locally"
 run = "nu scripts/setup.nu"
 
 # ---------------------------------------------------------------------------

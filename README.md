@@ -39,27 +39,28 @@ Uncloud installs itself onto a fresh Linux box **over SSH** — you never copy b
 
 | Where | What | Installed by |
 |-------|------|--------------|
-| Your machine | `uncloud` CLI (`uc`); `docker-pussh` (optional, needs local Docker) | `mise run setup` |
+| Your machine | `uncloud` CLI (`uc`) | `mise run setup` |
 | Hetzner box | Docker + `uncloudd` | `cloud-init/uncloud.yaml` on first boot |
 | Hetzner box | readiness gate (SSH up + cloud-init done) | tofu `remote-exec` provisioner — `apply` blocks until ready, **no shell polling** |
 | Hetzner box | WireGuard mesh, cluster | `uc machine init` over SSH |
 | Hetzner box | Wildcard/DNS-01 Caddy ingress | `caddy/compose.yaml` (deployed by `up`) |
 | Cloudflare | `*.<domain>` wildcard `A` record | OpenTofu |
 
-WireGuard ships in the kernel; `corrosion` (cluster state) is bundled in `uncloudd`; `unregistry` is pulled on-demand by `docker pussh`. The Cloudflare token is placed on the box for DNS-01 — scope it to `Zone:DNS:Edit` for your zone only.
+WireGuard ships in the kernel; `corrosion` (cluster state) is bundled in `uncloudd`; the image registry (`unregistry`) is built into uncloud — `uc build --push` / `uc image push` ship local images to the cluster, no external registry. The Cloudflare token is placed on the box for DNS-01 — scope it to `Zone:DNS:Edit` for your zone only.
 
 ## Requirements — just `mise`
 
 The only thing you install on your machine is **[mise](https://mise.jdx.dev)**. `mise install` pins and fetches everything else — `opentofu`, `hcloud`, `nushell`, `fnox` — and `mise run setup` adds the `uncloud` CLI (`uc`). (`git`, `ssh`, and `curl` are assumed — every dev box has them.)
 
-**Local Docker is optional, and only for building your own images.** Public-image recipes (the WordPress demo, etc.) need no local Docker — the Hetzner box pulls them. But to ship *your own* app you build it locally and push it straight to the box with `docker pussh` (unregistry — no registry, only the missing layers transfer):
+**Local Docker is optional, and only for building your own images.** Public-image recipes (the WordPress demo, etc.) need no local Docker — the Hetzner box pulls them. To ship *your own* app, Uncloud has the registry **built in** (unregistry) — one command builds locally and pushes straight to the cluster machines, no external registry, only the missing layers transfer:
 
 ```shell
-docker build --platform linux/amd64 -t myapp:1.2.3 .
-docker pussh myapp:1.2.3 root@<node-ip>
+uc build --push                      # build Compose services locally + push to the cluster
+# or push an image you already built:
+uc image push myapp:1.2.3
 ```
 
-On a Mac, **[OrbStack](https://orbstack.dev)** (or Docker Desktop / Colima) is the local Docker daemon that does the `build` step — this is the dev loop Uncloud documents.
+On a Mac, **[OrbStack](https://orbstack.dev)** (or Docker Desktop / Colima) is the local Docker daemon `uc build` uses for the build step. No `docker pussh` plugin needed — `uc` does it.
 
 You provide: a **Cloudflare** zone + API token (`Zone:DNS:Edit`, plus R2 if you want remote state), and a **Hetzner** project + an SSH key.
 
@@ -67,7 +68,7 @@ You provide: a **Cloudflare** zone + API token (`Zone:DNS:Edit`, plus R2 if you 
 
 ```bash
 mise install                      # opentofu, hcloud, nushell, fnox
-mise run setup                    # uncloud CLI (uc) + docker-pussh (optional)
+mise run setup                    # installs the uncloud CLI (uc)
 
 cp tofu/terraform.tfvars.example tofu/terraform.tfvars
 $EDITOR tofu/terraform.tfvars     # domain, cloudflare_zone_id, ssh_key_name
@@ -104,8 +105,8 @@ services:
       - api.amplifycms.net:8080/https
 ```
 ```bash
+uc image push your/api:latest                  # ship a local image to the cluster (built-in, no registry)
 mise run deploy
-docker pussh your/api:latest root@<node-ip>   # push private images, no registry
 ```
 
 ## Where do apps live? (this repo vs yours)
