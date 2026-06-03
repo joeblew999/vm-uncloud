@@ -8,6 +8,6 @@ def main [] {
     exit 1
   }
   let key = ($env.IMAGINARY_API_KEY? | default (random chars --length 48))
-  print -e $"imaginary API key: ($key)  — send as the 'API-Key' header (set IMAGINARY_API_KEY to pin it)"
+  print -e $"imaginary API key: ($key) — send as the 'API-Key' header; set IMAGINARY_API_KEY to pin it"
   { HOST: $"img.($dom)", IMAGINARY_API_KEY: $key } | to json
 }

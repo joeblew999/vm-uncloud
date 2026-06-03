@@ -26,6 +26,15 @@ def main [] {
     if $r.exit_code != 0 { print $"   FAIL ($f):\n($r.stderr)"; $fails = ($fails | append $"parse ($f)") }
   }
 
+  # Actually RUN each recipe prepare.nu (parse alone misses runtime errors like
+  # literal parens in interpolated strings). Must exit 0 and print valid JSON.
+  print "==> recipe prepare.nu"
+  for f in (glob examples/*/prepare.nu) {
+    let r = (with-env { DOMAIN: "ci.example.com" } { ^nu $f } | complete)
+    let ok = ($r.exit_code == 0) and ((do { $r.stdout | from json } | describe) starts-with "record")
+    if not $ok { print $"   FAIL ($f):\n($r.stderr | str trim)"; $fails = ($fails | append $"run ($f)") }
+  }
+
   print ""
   if ($fails | is-empty) {
     print "✓ CI passed"
