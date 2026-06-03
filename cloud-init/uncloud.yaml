@@ -1,13 +1,11 @@
 #cloud-config
-# Pre-installs the Uncloud machine bits on first boot: Docker + the uncloudd
-# daemon + systemd unit. Uses INSTALL_ONLY=true so the daemon is NOT started
-# yet — an uninitialised uncloudd has no cluster/WireGuard config and would
-# fail to start. `uc machine init` (over SSH) then starts and bootstraps it.
-# The installer is idempotent, so running it again during init is safe.
+# Minimal first-boot prep. We deliberately do NOT install uncloud here — that's
+# `uc machine init`'s job (single installer, no double-install, no half-started
+# daemon). cloud-init just makes sure curl/ca-certificates are present (the
+# uncloud installer fetched over SSH needs them) and provides a clean
+# `cloud-init status --wait` signal for tofu's readiness provisioner.
 package_update: true
 package_upgrade: false
 packages:
   - curl
   - ca-certificates
-runcmd:
-  - [ bash, -c, "curl -fsSL https://raw.githubusercontent.com/psviderski/uncloud/main/scripts/install.sh | INSTALL_ONLY=true bash" ]

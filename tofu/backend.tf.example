@@ -1,0 +1,15 @@
+# Remote state in Cloudflare R2 (S3-compatible), with OpenTofu 1.10 native
+# lockfile (no DynamoDB needed). Activated by `mise run state:remote`, which
+# copies this to backend.tf and generates backend.hcl from fnox.
+#
+# Why: local state can't be shared, can't run from CI, and if lost leaves
+# orphaned billable resources. R2 makes state durable + lockable.
+terraform {
+  backend "s3" {
+    # All values come from tofu/backend.hcl (generated):
+    #   bucket, key, region="auto", endpoints={s3=...}, use_path_style,
+    #   use_lockfile, and the skip_* flags R2 needs.
+    # Credentials come from env: AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY
+    # (mapped from your R2 S3 token in fnox).
+  }
+}

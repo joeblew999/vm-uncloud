@@ -68,7 +68,7 @@ def main [] {
   # DNS-01 covers every subdomain — no HTTP-01, no waiting, no rate-limit churn.
   # DOMAIN + CLOUDFLARE_API_TOKEN are injected here (token already in env via fnox).
   if ($domain | is-not-empty) {
-    print $"==> Deploying wildcard Caddy (DNS-01 cert for ($wildcard))"
+    print $"==> Deploying wildcard Caddy \(DNS-01 cert for ($wildcard)\)"
     with-env { DOMAIN: $domain } { ^uc deploy -f caddy/compose.yaml -y }
   }
 

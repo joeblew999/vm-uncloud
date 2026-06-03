@@ -76,6 +76,10 @@ description = "Shallow-clone/update uncloud-recipes into .src/"
 hide = true
 run = "nu scripts/recipes-sync.nu"
 
+[tasks."state:remote"]
+description = "Move tofu state into Cloudflare R2 (durable + lockable; one-time)"
+run = "fnox exec -- nu scripts/state-remote.nu"
+
 [tasks.smoke]
 description = "CI check: tofu apply+destroy a throwaway box (infra only, no DNS, no uncloud)"
 hide = true

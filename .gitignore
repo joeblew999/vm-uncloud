@@ -3,6 +3,10 @@
 *.tfvars
 *.auto.tfvars
 
+# Generated remote-state backend config (contains your R2 account id).
+tofu/backend.tf
+tofu/backend.hcl
+
 # OpenTofu / Terraform state and local provider cache.
 tofu/.terraform/
 tofu/.terraform.lock.hcl

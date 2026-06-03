@@ -135,6 +135,18 @@ Three layers, each the right tool for its question:
 
 `up`, `recipe`, and `down` append typed events to [`state/log.jsonl`](state/) automatically. `mise run status` shows all three. Commit the ledger to share the inventory.
 
+### Remote tofu state in R2 (recommended)
+
+By default tofu state is local — fine for one operator, but it can't be shared and, if lost, leaves orphaned billable resources. Move it to Cloudflare R2 (durable, lockable via OpenTofu 1.10's native lockfile — no DynamoDB) with one command:
+
+```bash
+mise run state:remote     # creates the vm-uncloud-tfstate bucket + migrates local state to R2
+```
+
+Needs valid **R2 S3 credentials** in fnox: `AWS_ACCESS_KEY_ID` (32 chars) + `AWS_SECRET_ACCESS_KEY` (64 chars) from an R2 API token (Cloudflare → R2 → Manage API Tokens), plus `R2_ACCOUNT_ID`. The task refuses to run with malformed creds rather than half-migrating. `backend.tf`/`backend.hcl` are generated and gitignored.
+
+> **Heads-up — `hcloud` token vs project.** tofu authenticates with `HCLOUD_TOKEN` from fnox, which may target a *different* Hetzner project than your `hcloud` CLI context. Always verify with `fnox exec -- hcloud server list` (same token tofu uses), not a bare `hcloud server list`, or you'll be looking at the wrong project.
+
 ## External services (bare metal, BMC, home hubs)
 
 Front non-container services (a BMC, HomeAssistant, a NAS, your `vm-servers` box) through the cluster's Caddy on your domain:
