@@ -1,0 +1,28 @@
+# Thin wrapper around `mise run ci`. The SAME checks run locally — see
+# scripts/ci.nu and the `ci` task in mise.toml. This workflow holds NO
+# validation logic; mise installs the pinned tools and runs the task.
+name: check
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install mise + repo tools
+        uses: jdx/mise-action@v2
+        with:
+          install: true
+          cache: true
+
+      - name: mise run ci
+        run: mise run ci

@@ -56,6 +56,10 @@ run = "fnox exec -- nu scripts/down.nu"
 description = "Show machines, services, and the resolved cluster domain"
 run = "fnox exec -- nu scripts/status.nu"
 
+[tasks.ci]
+description = "Repo checks: tofu fmt + validate + nushell parse (also run by CI)"
+run = "nu scripts/ci.nu"
+
 [tasks."caddy:external"]
 description = "Front non-container services (bare metal/BMC/home hub) via managed Caddy"
 run = "fnox exec -- nu scripts/caddy-external.nu"
