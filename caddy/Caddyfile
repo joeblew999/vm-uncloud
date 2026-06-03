@@ -1,0 +1,21 @@
+# Global Caddy config for the cluster ingress.
+#
+# Obtains ONE wildcard TLS cert for *.<domain> via the Cloudflare DNS-01
+# challenge — no HTTP-01, no port-80 reachability, no per-host issuance, no
+# Let's Encrypt rate-limit churn. Every service you publish on a subdomain
+# (app.<domain>, api.<domain>, ...) is served with this wildcard cert.
+#
+# {$DOMAIN} is substituted at load time from the container env; the Cloudflare
+# token is read at runtime. Both are injected by `mise run up` from fnox.
+
+{
+	# email {$ACME_EMAIL}   # uncomment to set an ACME contact
+}
+
+*.{$DOMAIN} {
+	tls {
+		dns cloudflare {env.CLOUDFLARE_API_TOKEN}
+		resolvers 1.1.1.1
+	}
+	respond "No host matched" 404
+}

@@ -88,17 +88,30 @@ resource "hcloud_server" "node" {
   }
 }
 
-# Cloudflare A records. Each hostname in var.app_hostnames points at the first
-# node's public IPv4 — that's the machine running Caddy (ingress). For a real
-# multi-node HA ingress you'd front these with a load balancer; for a single
-# ingress node this is exactly right.
-resource "cloudflare_dns_record" "app" {
-  for_each = toset(var.app_hostnames)
+# One wildcard A record: *.<domain> -> the ingress node. Every subdomain
+# (app, api, wordpress, anything) resolves to the box with zero per-host setup.
+# Caddy obtains a single *.<domain> wildcard cert via the Cloudflare DNS-01
+# challenge (no HTTP-01, no port-80/propagation timing, no per-host rate limits).
+# proxied = false so Caddy terminates TLS directly (DNS-only / grey cloud).
+resource "cloudflare_dns_record" "wildcard" {
+  count = var.domain == "" ? 0 : 1
 
   zone_id = var.cloudflare_zone_id
-  name    = each.value == "@" ? var.domain : "${each.value}.${var.domain}"
+  name    = "*.${var.domain}"
   type    = "A"
   content = hcloud_server.node[0].ipv4_address
   ttl     = 60
-  proxied = false # Caddy terminates TLS via Let's Encrypt; keep DNS-only (grey cloud).
+  proxied = false
+}
+
+# Optional apex record (example.com itself), off by default.
+resource "cloudflare_dns_record" "apex" {
+  count = (var.domain != "" && var.dns_apex) ? 1 : 0
+
+  zone_id = var.cloudflare_zone_id
+  name    = var.domain
+  type    = "A"
+  content = hcloud_server.node[0].ipv4_address
+  ttl     = 60
+  proxied = false
 }

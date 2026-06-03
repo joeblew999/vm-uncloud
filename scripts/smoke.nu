@@ -5,7 +5,7 @@
 
 const TOFU = ["-chdir=tofu"]
 const VARS = ["-var=cluster_name=uncloud-smoke" "-var=node_count=1"
-              "-var=app_hostnames=[]" "-var=domain=" "-var=cloudflare_zone_id="]
+              "-var=domain=" "-var=cloudflare_zone_id="]
 
 def main [] {
   print "==> tofu init"

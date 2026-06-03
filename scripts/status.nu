@@ -8,8 +8,8 @@ def main [] {
   let out = (^tofu ...$TOFU output -json | complete)
   if $out.exit_code == 0 {
     let o = ($out.stdout | from json)
-    print $"  Nodes:   ($o.node_ipv4.value | str join ', ')"
-    print $"  Domains: ($o.fqdns.value | str join ', ')"
+    print $"  Nodes:    ($o.node_ipv4.value | str join ', ')"
+    print $"  Wildcard: ($o.wildcard.value)"
   } else {
     print "  (no state — run 'mise run up' first)"
   }

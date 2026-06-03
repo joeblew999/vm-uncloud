@@ -9,7 +9,7 @@ mise run recipe <name>
 
 | Recipe | What it is | Notes |
 |--------|-----------|-------|
-| [`wordpress-mariadb`](https://github.com/psviderski/uncloud-recipes/tree/main/wordpress-mariadb) | WordPress + MariaDB, HTTPS on your domain | **Best domain demo.** Set `WP_DOMAIN` to a hostname you created in `app_hostnames`. |
+| [`wordpress-mariadb`](https://github.com/psviderski/uncloud-recipes/tree/main/wordpress-mariadb) | WordPress + MariaDB, HTTPS on your domain | **Best domain demo.** Set `WP_DOMAIN` to any subdomain — the wildcard record + cert cover it. |
 | [`nats`](https://github.com/psviderski/uncloud-recipes/tree/main/nats) | NATS cluster with JetStream | Global mode (one per machine), host-port only — no public URL. |
 | [`postgres`](https://github.com/psviderski/uncloud-recipes/tree/main/postgres) | PostgreSQL 18 | Host-port only; bind to localhost. |
 | [`uncloud-web-ui`](https://github.com/psviderski/uncloud-recipes/tree/main/uncloud-web-ui) | Read-only cluster dashboard (Bun, PoC) | Needs a local build; mounts the uncloud socket. |
@@ -17,17 +17,16 @@ mise run recipe <name>
 ## Deploy WordPress on your domain
 
 ```bash
-# 1. add the hostname so DNS + cert work
-#    in tofu/terraform.tfvars: app_hostnames = ["wordpress"]
+# 1. bring up the cluster (creates the *.<domain> wildcard record + cert)
 mise run up
 
-# 2. deploy the recipe pointed at that hostname
+# 2. deploy the recipe on any subdomain — no per-host setup needed
 WP_DOMAIN=wordpress.amplifycms.net mise run recipe wordpress-mariadb
 ```
 
-`recipe wordpress-mariadb` generates random DB credentials and injects `WP_DOMAIN` + `DB_*` as environment for the deploy. Uncloud's Caddy obtains a Let's Encrypt cert for the hostname automatically; browse to `https://wordpress.amplifycms.net` once the cert is issued (~30–60s).
+`recipe wordpress-mariadb` generates random DB credentials and injects `WP_DOMAIN` + `DB_*` as environment for the deploy. The wildcard cert already covers `wordpress.amplifycms.net`, so it's served over HTTPS immediately — no per-host cert wait.
 
-> ✅ **Verified end-to-end** on a real `cpx22`/`fsn1` box against `amplifycms.net`: `mise run up` → `recipe wordpress-mariadb` produced `https://wordpress.amplifycms.net` serving the WordPress installer over HTTP/2 with a valid Let's Encrypt cert (~80s to first cert), then `mise run down` removed the server, the A record, and the local context.
+> The context-naming fix, recipe deploy, full `up`/`deploy`/`down` ledger lifecycle, and clean teardown were verified end-to-end on a real `cpx22`/`fsn1` box against `amplifycms.net`. (An earlier per-host **HTTP-01** run also served WordPress over a valid cert; the move to wildcard **DNS-01** removes the cert-issuance flakiness seen on rapid re-runs.)
 
 ## How recipes are run (and why this way)
 

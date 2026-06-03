@@ -26,16 +26,26 @@ If you want to run a containerised web service on your own domain, you're in the
 
 ## How it works
 
-Uncloud installs itself onto a fresh Linux box **over SSH** — you never copy binaries up. So locally you only need the `uncloud` CLI. The gaps the CLI doesn't cover — *creating the box* and *pointing your domain at it* — are what the OpenTofu config here does. Uncloud's bundled **Caddy** then terminates TLS with Let's Encrypt per hostname, so a plain Cloudflare `A` record is all you need.
+Uncloud installs itself onto a fresh Linux box **over SSH** — you never copy binaries up. So locally you only need the `uncloud` CLI. The gaps the CLI doesn't cover — *creating the box* and *pointing your domain at it* — are what the OpenTofu config here does.
+
+**TLS is wildcard + DNS-01, on purpose.** Caddy (the `caddybuilds/caddy-cloudflare` image, which bundles the Cloudflare DNS plugin) obtains **one `*.<domain>` wildcard certificate** via the Cloudflare DNS-01 challenge. That means:
+
+- a single wildcard `A` record (`*.<domain>` → ingress node) covers every subdomain — no per-host DNS setup;
+- **no HTTP-01** — no dependency on port 80 reachability or DNS propagation timing;
+- **nothing to poll for** — the cert is issued once at cluster bring-up and covers any subdomain you later publish, instantly;
+- **no Let's Encrypt rate-limit churn** from requesting a fresh cert per hostname on every deploy.
+
+(This is why we *didn't* stick with per-host HTTP-01: the cert failures, the propagation waits, and the rate-limit churn are all symptoms of it.)
 
 | Where | What | Installed by |
 |-------|------|--------------|
 | Your machine | `uncloud` CLI (`uc`), `docker-pussh` | `mise run setup` |
 | Hetzner box | Docker + `uncloudd` | `cloud-init/uncloud.yaml` on first boot |
-| Hetzner box | WireGuard mesh, Caddy, cluster | `uc machine init` over SSH |
-| Cloudflare | `A` records → ingress node | OpenTofu |
+| Hetzner box | WireGuard mesh, cluster | `uc machine init` over SSH |
+| Hetzner box | Wildcard/DNS-01 Caddy ingress | `caddy/compose.yaml` (deployed by `up`) |
+| Cloudflare | `*.<domain>` wildcard `A` record | OpenTofu |
 
-WireGuard ships in the kernel; `corrosion` (cluster state) is bundled in `uncloudd`; `unregistry` is pulled on-demand by `docker pussh`.
+WireGuard ships in the kernel; `corrosion` (cluster state) is bundled in `uncloudd`; `unregistry` is pulled on-demand by `docker pussh`. The Cloudflare token is placed on the box for DNS-01 — scope it to `Zone:DNS:Edit` for your zone only.
 
 ## Setup
 
@@ -62,7 +72,7 @@ Secrets live in the macOS keychain (service `fnox`, shared with `vm-servers`) an
 |---|---|---|
 | `domain` | — | your apex domain, e.g. `amplifycms.net` |
 | `cloudflare_zone_id` | — | Cloudflare dashboard sidebar |
-| `app_hostnames` | `["app"]` | A records → ingress node; `"@"` = apex |
+| `dns_apex` | `false` | also create an `A` record for the apex (a `*.<domain>` wildcard is always created) |
 | `node_count` | `1` | `3` for a WireGuard mesh |
 | `server_type` | `cpx22` | x86 2vCPU/4GB; `cax11` ARM. `hcloud server-type list` |
 | `location` | `fsn1` | `nbg1`, `hel1`, `ash`, `hil`, `sin` |
@@ -70,7 +80,7 @@ Secrets live in the macOS keychain (service `fnox`, shared with `vm-servers`) an
 
 ## Deploy apps
 
-Reference hostnames you created in `app_hostnames`:
+Pick any subdomain — the wildcard record + wildcard cert mean it just works, no extra setup:
 
 ```yaml title="compose.yaml"
 services:
@@ -136,11 +146,17 @@ mise run caddy:external
 
 ## Troubleshooting
 
-**HTTPS cert doesn't come up (`tlsv1 alert internal error`, `000` on :443).** Caddy is fine (`:80` answers, the service shows its endpoint in `uc ls`) — it just hasn't obtained the Let's Encrypt cert yet. Normal issuance is ~30–60s. Causes of delay/failure:
-- **Let's Encrypt rate limits** from rapid `up`/`down` cycles against the *same* hostname (e.g. while testing). Cert state lives in Caddy's Docker volume and is discarded on teardown, so every fresh cluster re-requests. LE allows 5 duplicate certs per hostname per week and throttles repeated failed validations with exponential backoff — Caddy keeps retrying. Fix: wait, use a throwaway hostname, or point at LE staging while iterating.
-- **DNS not yet visible to LE.** The `A` record must resolve publicly before the HTTP-01 challenge can pass. Check with `dig +short <host> @1.1.1.1`. (Note: macOS may *negative-cache* a name from before the record existed — `curl` then fails to resolve even though `dig` works. `sudo dscacheutil -flushcache` or test with `curl --resolve <host>:443:<ip>`.)
-- Inspect the real reason on the box: `docker logs $(docker ps -qf name=caddy) 2>&1 | grep -iE 'acme|obtain|error'`.
+**HTTPS cert.** Issuance is one wildcard `*.<domain>` cert via Cloudflare DNS-01, obtained at cluster bring-up — no per-host waiting. If it's missing, check Caddy on the box:
+- `docker logs $(docker ps -qf name=caddy) 2>&1 | grep -iE 'acme|obtain|error'`.
+- DNS-01 needs the `CLOUDFLARE_API_TOKEN` (scoped `Zone:DNS:Edit`) present in the Caddy container env — `up` injects it; confirm with `uc ls` that the `caddy` service is the `caddybuilds/caddy-cloudflare` image.
+- macOS may *negative-cache* a name from before the record existed, so `curl` fails to resolve even when `dig +short <host> @1.1.1.1` works: `sudo dscacheutil -flushcache` or test with `curl --resolve <host>:443:<ip>`.
+
+> Earlier versions of this repo used per-host **HTTP-01**, which is where the `tlsv1 alert internal error` / `000-on-:443` / rate-limit-churn symptoms came from. The wildcard/DNS-01 setup above is the fix — if you somehow revert to HTTP-01, those symptoms return.
 
 **`uc machine init` errors with `could not open TTY`.** Its progress UI needs a real terminal. Run `mise run up` from an interactive shell, not a headless/CI context (the scripts already pass `-y`).
 
 **`context not found` on deploy/recipe/down.** The cluster context must match `$UNCLOUD_CONTEXT` (default `hetzner`). `mise run up` creates it with the right name via `--context`; if you ran `uc machine init` by hand, pass `--context hetzner`.
+
+## On Cloudflare's new `cf` CLI
+
+[Cloudflare's `cf`](https://blog.cloudflare.com/cf-cli-local-explorer/) (the planned successor to Wrangler) is an **early technical preview** — `npx cf` / `npm i -g cf` (npm, not Bun). It does **not** manage DNS records yet, so it can't replace the OpenTofu Cloudflare provider used here. Worth revisiting once DNS support lands; until then DNS stays in `tofu/`.

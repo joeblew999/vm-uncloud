@@ -13,9 +13,13 @@ output "ingress_ipv4" {
   value       = hcloud_server.node[0].ipv4_address
 }
 
-output "fqdns" {
-  description = "Fully-qualified hostnames now pointing at the ingress node"
-  value       = [for h in var.app_hostnames : h == "@" ? var.domain : "${h}.${var.domain}"]
+output "wildcard" {
+  description = "Wildcard hostname pointing at the ingress node (empty if no domain)"
+  value       = var.domain == "" ? "" : "*.${var.domain}"
+}
+
+output "domain" {
+  value = var.domain
 }
 
 output "cluster_name" {

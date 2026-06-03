@@ -15,15 +15,13 @@ variable "domain" {
   default     = ""
 }
 
-variable "app_hostnames" {
-  description = <<-EOT
-    Subdomain labels to create A records for, each pointing at the ingress node.
-    Use "@" for the apex domain itself. Example: ["app", "api", "www"].
-    These are the hostnames you then publish services on, e.g.
-      uc run -p app.example.com:8000/https <image>
-  EOT
-  type        = list(string)
-  default     = ["app"]
+# A single wildcard record *.<domain> is created automatically when domain is
+# set, so you never declare per-host records — publish a service on ANY
+# subdomain (app/api/wordpress/...) and it just resolves + gets the wildcard cert.
+variable "dns_apex" {
+  description = "Also create an A record for the apex domain itself (example.com)"
+  type        = bool
+  default     = false
 }
 
 # Hetzner machine shape.

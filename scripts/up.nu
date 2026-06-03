@@ -27,9 +27,10 @@ def main [] {
 
   let out = (^tofu ...$TOFU output -json | from json)
   let ips = ($out.node_ipv4.value)
-  let fqdns = ($out.fqdns.value)
+  let domain = ($out.domain.value)
+  let wildcard = ($out.wildcard.value)
   print $"==> Servers: ($ips | str join ', ')"
-  if ($fqdns | is-not-empty) { print $"==> Domains: ($fqdns | str join ', ')" }
+  if ($domain | is-not-empty) { print $"==> Wildcard: ($wildcard) -> ($ips | get 0)" }
 
   let key = (ssh_key_file)
   for ip in $ips { prepare_host $ip $key }
@@ -40,33 +41,45 @@ def main [] {
   # step never created.
   let ctx = ($env.UNCLOUD_CONTEXT? | default "hetzner")
 
+  # When we have a domain we deploy our own wildcard/DNS-01 Caddy below, so skip
+  # the default Caddy at init time (--no-caddy). --no-dns: we manage DNS via
+  # Cloudflare, not the uncld.dev rental.
+  let caddy_flag = (if ($domain | is-empty) { [] } else { [--no-caddy] })
+
   # First node initialises the cluster; the rest join the WireGuard mesh.
-  # --no-dns: we manage DNS ourselves via Cloudflare, so skip the uncld.dev rental.
   $ips | enumerate | each {|row|
     let ip = $row.item
     let mname = $"($ctx)-($row.index + 1)"
     if $row.index == 0 {
       print $"==> uc machine init root@($ip) --context ($ctx) --name ($mname) --no-dns"
-      ^uc machine init $"root@($ip)" --context $ctx --name $mname --no-dns -i $key -y
+      ^uc machine init $"root@($ip)" --context $ctx --name $mname --no-dns ...$caddy_flag -i $key -y
     } else {
       print $"==> uc machine add root@($ip) --context ($ctx) --name ($mname)"
       ^uc machine add $"root@($ip)" --context $ctx --name $mname -i $key -y
     }
   }
 
+  # Deploy the wildcard/DNS-01 Caddy ingress. ONE *.<domain> cert via Cloudflare
+  # DNS-01 covers every subdomain — no HTTP-01, no waiting, no rate-limit churn.
+  # DOMAIN + CLOUDFLARE_API_TOKEN are injected here (token already in env via fnox).
+  if ($domain | is-not-empty) {
+    print $"==> Deploying wildcard Caddy (DNS-01 cert for ($wildcard))"
+    with-env { DOMAIN: $domain } { ^uc deploy -f caddy/compose.yaml -y }
+  }
+
   # Record an 'up' event in the ledger (best-effort). Omit --fqdns when empty:
   # nushell drops empty-string flag values when invoking a script.
-  let fqstr = ($fqdns | str join ",")
   do {
     let base = [up --cluster $ctx --ips ($ips | str join ",") --server-type $out.server_type.value --location $out.location.value]
-    let args = (if ($fqstr | is-empty) { $base } else { $base | append [--fqdns $fqstr] })
+    let args = (if ($wildcard | is-empty) { $base } else { $base | append [--fqdns $wildcard] })
     nu state/log.nu ...$args
   } | ignore
 
   print ""
   print "Cluster is up. Next:"
-  if ($fqdns | is-not-empty) {
-    print $"  uc run -p ($fqdns | get 0):8000/https traefik/whoami"
+  if ($domain | is-not-empty) {
+    print $"  publish any subdomain — it resolves \(($wildcard)\) and gets the wildcard cert instantly:"
+    print $"  uc run -p app.($domain):8000/https traefik/whoami"
   }
   print "  mise run deploy    # apply compose.yaml"
   print "  mise run status"

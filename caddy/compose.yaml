@@ -1,0 +1,26 @@
+# Cluster ingress: Caddy built with the Cloudflare DNS plugin, deployed as the
+# global `caddy` service. Replaces the default Caddy so it can do DNS-01 wildcard
+# certs. Follows uncloud's documented managing-caddy pattern.
+#
+# DOMAIN and CLOUDFLARE_API_TOKEN are injected at deploy time by `mise run up`
+# (from fnox/keychain). The token is needed ON the box for the DNS-01 challenge —
+# scope it to Zone:DNS:Edit for just your zone.
+services:
+  caddy:
+    image: caddybuilds/caddy-cloudflare:2.10.2
+    command: caddy run -c /config/Caddyfile
+    environment:
+      CADDY_ADMIN: unix//run/caddy/admin.sock
+      DOMAIN: ${DOMAIN}
+      CLOUDFLARE_API_TOKEN: ${CLOUDFLARE_API_TOKEN}
+    volumes:
+      - /var/lib/uncloud/caddy:/data
+      - /var/lib/uncloud/caddy:/config
+      - /run/uncloud/caddy:/run/caddy
+    x-ports:
+      - 80:80@host
+      - 443:443@host
+      - 443:443/udp@host
+    x-caddy: ./Caddyfile
+    deploy:
+      mode: global

@@ -1,11 +1,13 @@
 # Copy to terraform.tfvars and fill in. This file holds NON-secret config only.
-# (terraform.tfvars is gitignored.) Secrets come from fnox: hcloud_token and
-# cloudflare_api_token are injected as TF_VAR_* by `mise run up`.
+# (terraform.tfvars is gitignored.) Secrets come from fnox: HCLOUD_TOKEN and
+# CLOUDFLARE_API_TOKEN are injected from the keychain by `mise run up`.
 
 # --- Cloudflare ---
 cloudflare_zone_id = "your-zone-id-here"   # Cloudflare dashboard -> your domain -> API (right sidebar)
 domain             = "example.com"
-app_hostnames      = ["app"]               # creates app.example.com -> ingress node
+# A single wildcard record *.example.com is created automatically -> publish a
+# service on ANY subdomain and it just works. Optionally also create the apex:
+# dns_apex = true
 
 # --- Hetzner ---
 cluster_name = "uncloud"
