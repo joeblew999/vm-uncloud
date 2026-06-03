@@ -11,6 +11,7 @@
 [tools]
 opentofu = "1.10.7"
 hcloud   = "1.51.0"
+fnox     = "1.19.0"
 "github:nushell/nushell[exe=nu]" = "0.108.0"
 
 [env]

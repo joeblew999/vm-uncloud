@@ -2,13 +2,13 @@
 
 **Spin up an [Uncloud](https://github.com/psviderski/uncloud) cluster on a Hetzner VPS, served on your own Cloudflare domain — with three commands.**
 
-It provisions the server, points your domain at it, installs Uncloud, and deploys your apps. Tear it all down just as fast. Glued together with `mise` + `nushell`, secrets from `fnox`/keychain.
+It provisions the server, points your domain at it, installs Uncloud, and deploys your apps. Tear it all down just as fast. Glued together with `mise` + `nushell`, secrets from `fnox`/keychain. **The only thing you need on your machine is [`mise`](https://mise.jdx.dev)** — no local Docker.
 
 ```bash
-mise install        # tools: opentofu, hcloud, nushell
-mise run setup      # install the uncloud CLI locally
-mise run up         # create VPS + DNS + cluster
-mise run deploy     # deploy compose.yaml
+mise install        # fetches opentofu, hcloud, nushell, fnox
+mise run setup      # installs the uncloud CLI (uc)
+mise run up         # create VPS + wildcard DNS + cluster
+mise run deploy     # deploy compose.yaml   (or: mise run recipe wordpress)
 mise run down       # destroy everything, cleanly
 ```
 
@@ -37,8 +37,6 @@ Uncloud installs itself onto a fresh Linux box **over SSH** — you never copy b
 
 (This is why we *didn't* stick with per-host HTTP-01: the cert failures, the propagation waits, and the rate-limit churn are all symptoms of it.)
 
-**No local Docker required.** `uc deploy` orchestrates the *remote* cluster — images are pulled by the Hetzner box's Docker, not yours. Your machine just needs `uc` + the mise tools. (Local Docker is only needed for the *optional* `docker pussh`, which pushes your own locally-built images to the box without a registry — not used by the demos.)
-
 | Where | What | Installed by |
 |-------|------|--------------|
 | Your machine | `uncloud` CLI (`uc`); `docker-pussh` (optional, needs local Docker) | `mise run setup` |
@@ -50,22 +48,28 @@ Uncloud installs itself onto a fresh Linux box **over SSH** — you never copy b
 
 WireGuard ships in the kernel; `corrosion` (cluster state) is bundled in `uncloudd`; `unregistry` is pulled on-demand by `docker pussh`. The Cloudflare token is placed on the box for DNS-01 — scope it to `Zone:DNS:Edit` for your zone only.
 
+## Requirements — just `mise`
+
+The only thing you install on your machine is **[mise](https://mise.jdx.dev)**. `mise install` pins and fetches everything else — `opentofu`, `hcloud`, `nushell`, `fnox` — and `mise run setup` adds the `uncloud` CLI (`uc`). (`git`, `ssh`, and `curl` are assumed — every dev box has them.)
+
+**No local Docker.** Deploys run on the *remote* cluster; the Hetzner box pulls the images. Docker on your laptop is only needed for the optional `docker pussh` (pushing your own locally-built images to the box without a registry) — not used by any demo here.
+
+You provide: a **Cloudflare** zone + API token (`Zone:DNS:Edit`, plus R2 if you want remote state), and a **Hetzner** project + an SSH key.
+
 ## Setup
 
-**Prerequisites:** a Cloudflare zone + token (`Zone:DNS:Edit`), a Hetzner project + SSH key, `mise`.
-
 ```bash
-mise install
-mise run setup
+mise install                      # opentofu, hcloud, nushell, fnox
+mise run setup                    # uncloud CLI (uc) + docker-pussh (optional)
 
 cp tofu/terraform.tfvars.example tofu/terraform.tfvars
-$EDITOR tofu/terraform.tfvars     # domain, cloudflare_zone_id, ssh_key_name, hostnames
+$EDITOR tofu/terraform.tfvars     # domain, cloudflare_zone_id, ssh_key_name
 
 mise run secrets:set              # seeds HCLOUD_TOKEN + CLOUDFLARE_API_TOKEN (skips if set)
 mise run up
 ```
 
-Secrets live in the macOS keychain (service `fnox`, shared with `vm-servers`) and are injected by `fnox exec`; the OpenTofu providers read `HCLOUD_TOKEN` / `CLOUDFLARE_API_TOKEN` straight from the environment — never written to disk. SSH uses `~/.ssh/gedw99_hetzner`.
+Secrets live in the macOS keychain (service `fnox`) and are injected by `fnox exec`; the OpenTofu providers read `HCLOUD_TOKEN` / `CLOUDFLARE_API_TOKEN` straight from the environment — never written to disk. SSH uses `~/.ssh/gedw99_hetzner`.
 
 > **Run `up`/`down` from a real terminal.** `uc machine init`/`uc ctx` use an interactive TUI that needs a TTY. The scripts pass `-y` so provisioning still completes headless; only the progress UI needs the TTY.
 
