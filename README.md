@@ -93,32 +93,37 @@ Secrets live in the macOS keychain (service `fnox`) and are injected by `fnox ex
 | `location` | `fsn1` | `nbg1`, `hel1`, `ash`, `hil`, `sin` |
 | `ssh_key_name` | — | name of an SSH key in your Hetzner project |
 
-## Deploy apps
+## Deploy apps — and the fast update loop
 
-Pick any subdomain — the wildcard record + wildcard cert mean it just works, no extra setup:
+The best integration is **one command**. Give a service a `build:` section and `mise run deploy` does the whole loop — build locally, push only the **changed layers** over SSH (uncloud's built-in registry — no external registry, no rebuild on the server), then roll out with health checks. Pick any subdomain; the wildcard record + cert already cover it.
 
 ```yaml title="compose.yaml"
 services:
   api:
-    image: your/api:latest
+    build: .                          # your Dockerfile
     x-ports:
       - api.amplifycms.net:8080/https
 ```
 ```bash
-mise run deploy
+mise run deploy        # build (local Docker) + push changed layers + rolling deploy — one command
 ```
 
-### Fast updates — push local images straight to the cluster
-
-Uncloud's registry (unregistry) is **built in**, so the fast dev loop is: change code → push → live in seconds. Only the **changed layers** transfer over SSH — no rebuild on the server, no external registry, no `docker pull`.
+**Continuous iteration** — re-deploy on every save via mise's built-in watcher:
 
 ```bash
-mise run push                 # uc build --push: build Compose services locally + push to machines
-mise run push your/api:1.2.3  # uc image push: push an image you already built
-mise run deploy               # roll it out
+mise watch deploy
 ```
 
-Local Docker (e.g. [OrbStack](https://orbstack.dev) on a Mac) is only the daemon `uc build` uses to build — the push itself is `uc`'s, no plugin.
+**Just push, don't deploy** (pre-warm layers, or ship an image built elsewhere):
+
+```bash
+mise run push                 # uc build --push
+mise run push your/api:1.2.3  # uc image push <image>
+```
+
+Local Docker (e.g. [OrbStack](https://orbstack.dev) on a Mac) is only the daemon `uc build` uses — the push is `uc`'s own, no plugin.
+
+**Where apps live:** keep the `compose.yaml` + `Dockerfile` in the app's own repo and target the cluster with `uc deploy -c hetzner` (or `UNCLOUD_CONTEXT`). `vm-uncloud` is the platform; apps deploy onto it.
 
 ## Where do apps live? (this repo vs yours)
 
