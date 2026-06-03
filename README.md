@@ -1,168 +1,100 @@
 # vm-uncloud
 
-Spin up an [Uncloud](https://github.com/psviderski/uncloud) cluster on a Hetzner VPS, served on your own Cloudflare domain. It creates the server, points your domain at it, installs Uncloud, deploys your apps — and tears it all down just as fast. Built with `mise`, `nushell`, and OpenTofu; secrets from `fnox`/keychain.
+[Uncloud](https://github.com/psviderski/uncloud) cluster on a Hetzner VPS, on your own Cloudflare domain. Create it, deploy apps, tear it down. The only tool you install is [`mise`](https://mise.jdx.dev).
 
 ```bash
-mise install        # fetches opentofu, hcloud, nushell, fnox
-mise run setup      # installs the uncloud CLI (uc)
-mise run up         # server + wildcard DNS + cluster
-mise run deploy     # deploy compose.yaml   (or: mise run recipe wordpress)
-mise run down       # destroy everything, cleanly
+mise install      # opentofu, hcloud, nushell, fnox
+mise run setup    # the uncloud CLI (uc)
+mise run up       # server + wildcard DNS + cluster
+mise run deploy   # deploy compose.yaml
+mise run down     # destroy everything
 ```
-
-The only tool you install by hand is [`mise`](https://mise.jdx.dev); it fetches the rest.
-
-## The `vm-*` family
-
-| Repo | For |
-|------|-----|
-| **vm-uncloud** (this) | Host **Linux web apps / containers** — Uncloud on Hetzner + Cloudflare DNS + auto-HTTPS, deployed via Docker Compose. |
-| [vm-servers](https://github.com/joeblew999/vm-servers) | Run **Windows in a VM** — Mac control plane, Hetzner/Vultr drivers, R2 snapshots. |
-| [vm-software](https://github.com/joeblew999/vm-software) | Catalog of **Windows installers**, git-cloned inside a vm-servers VM. |
-
-This repo is the **platform**. Your apps keep their own `compose.yaml` and `Dockerfile` in their own repos and deploy onto it.
-
-## How it works
-
-Uncloud installs itself onto a fresh Linux box over SSH — you never copy binaries up. The two things its CLI doesn't do — create the box and point your domain at it — are what OpenTofu handles here.
-
-TLS is a single **wildcard certificate** issued via the Cloudflare **DNS-01** challenge (Caddy runs the `caddybuilds/caddy-cloudflare` image). One `*.<domain>` cert, so:
-
-- a single wildcard `A` record covers every subdomain — no per-host DNS;
-- the cert is issued once at bring-up and instantly covers any subdomain you publish later;
-- no port-80 dependency, no per-host issuance, no Let's Encrypt rate limits.
-
-| Where | What | By |
-|-------|------|----|
-| Your machine | `uncloud` CLI (`uc`) | `mise run setup` |
-| Hetzner box | readiness gate (SSH + cloud-init) | tofu `remote-exec` provisioner — `apply` blocks until ready |
-| Hetzner box | Docker, `uncloudd`, WireGuard mesh, cluster | `uc machine init` over SSH |
-| Hetzner box | wildcard DNS-01 Caddy ingress | `caddy/compose.yaml` |
-| Cloudflare | `*.<domain>` wildcard `A` record | OpenTofu |
-
-WireGuard ships in the kernel. `corrosion` (cluster state) is bundled in `uncloudd`. The image registry (`unregistry`) is built into Uncloud. The Cloudflare token sits on the box for DNS-01 — scope it to `Zone:DNS:Edit`.
 
 ## Setup
 
-You provide a **Cloudflare** zone + API token (`Zone:DNS:Edit`) and a **Hetzner** project + SSH key. Then:
+Need: a Cloudflare zone + token (`Zone:DNS:Edit`), a Hetzner project + SSH key.
 
 ```bash
-mise install                      # opentofu, hcloud, nushell, fnox
-mise run setup                    # uncloud CLI (uc)
-
-cp tofu/terraform.tfvars.example tofu/terraform.tfvars
-$EDITOR tofu/terraform.tfvars     # domain, cloudflare_zone_id, ssh_key_name
-
-mise run secrets:set              # store HCLOUD_TOKEN + CLOUDFLARE_API_TOKEN in the keychain
+cp tofu/terraform.tfvars.example tofu/terraform.tfvars   # set domain, cloudflare_zone_id, ssh_key_name
+mise run secrets:set                                     # tokens -> keychain
 mise run up
 ```
 
-Secrets live in the macOS keychain (`fnox`) and are injected by `fnox exec`; the OpenTofu providers read `HCLOUD_TOKEN` and `CLOUDFLARE_API_TOKEN` from the environment, never disk. SSH uses `~/.ssh/gedw99_hetzner`. Run `up` and `down` from an interactive terminal — `uc machine init` and `uc ctx` use a TUI that needs a TTY.
+Run `up`/`down` from a real terminal (`uc` uses a TTY). Secrets stay in the keychain via `fnox`, never on disk. TLS is one `*.<domain>` wildcard cert via Cloudflare DNS-01 — any subdomain just works.
 
-### Configuration (`tofu/terraform.tfvars`)
+## Config — `tofu/terraform.tfvars`
 
-| Variable | Default | Notes |
+| Variable | Default | |
 |---|---|---|
-| `domain` | — | your apex domain, e.g. `example.com` |
-| `cloudflare_zone_id` | — | from the Cloudflare dashboard sidebar |
-| `dns_apex` | `false` | also point the apex at the box (the `*.<domain>` wildcard is always created) |
-| `node_count` | `1` | `3` for a WireGuard mesh |
-| `server_type` | `cpx22` | x86 2 vCPU / 4 GB; `cax11` for ARM (`hcloud server-type list`) |
-| `location` | `fsn1` | `nbg1`, `hel1`, `ash`, `hil`, `sin` |
-| `ssh_key_name` | — | an SSH key already in your Hetzner project |
+| `domain` | — | your apex, e.g. `example.com` |
+| `cloudflare_zone_id` | — | Cloudflare dashboard sidebar |
+| `ssh_key_name` | — | an SSH key in your Hetzner project |
+| `node_count` | `1` | `3` for a mesh |
+| `server_type` | `cpx22` | `cax11` = ARM |
+| `location` | `fsn1` | `nbg1` `hel1` `ash` `hil` `sin` |
+| `dns_apex` | `false` | also point the apex at the box |
 
-## Deploy apps
+## Deploy
 
-Give a service a `build:` section and `mise run deploy` runs the whole loop in one command: build locally, push only the **changed layers** over SSH, then roll out with health checks.
+Use `${DOMAIN}` in compose — never hardcode the host; `mise run deploy` injects it.
 
-Domains are never hardcoded. Set yours once (`domain` in `tofu/terraform.tfvars`) and write `${DOMAIN}` in compose — `mise run deploy` reads it from tofu state and injects it. Any subdomain resolves via the wildcard record and is covered by the wildcard cert.
-
-```yaml title="compose.yaml"
+```yaml
 services:
   api:
     build: .
-    x-ports:
-      - api.${DOMAIN}:8080/https
+    x-ports: ["api.${DOMAIN}:8080/https"]
 ```
 
 ```bash
-mise run deploy               # build + push changed layers + rolling deploy
-mise watch deploy             # re-deploy on every save
-mise run push                 # build + push only (uc build --push)
-mise run push your/api:1.2.3  # push an image built elsewhere (uc image push)
+mise run deploy        # build + push changed layers + roll out
+mise watch deploy      # re-deploy on save
+mise run push [image]  # push only — built-in registry, no docker pull
 ```
 
-Local Docker (e.g. [OrbStack](https://orbstack.dev) on a Mac) is only the daemon `uc build` uses to build — the push is `uc`'s own.
-
-### The registry
-
-There is no registry to run. Uncloud embeds [unregistry](https://github.com/psviderski/unregistry) — "rsync for Docker images." On push, `uc` opens an SSH tunnel to each target machine, starts a temporary unregistry container, transfers only the layers that machine lacks, lands the image directly in its store, and removes the container. `uc machine init` enables Docker's **containerd image store** so pushed images are usable with no `docker pull` — which is why `cloud-init` leaves the Docker install to `uc`. On multi-node clusters the push goes to every machine running the service.
+Building needs local Docker (e.g. OrbStack on a Mac); the push is `uc`'s own.
 
 ## Recipes
 
-`mise run recipe <name>` deploys a service by name, resolving the repo's committed [`recipes/`](recipes/) **first**, then the upstream catalog:
+Ready-to-run services in [`recipes/`](recipes/) (local first, then [`recipes.toml`](recipes.toml) upstream):
 
 ```bash
-mise run recipe                  # list everything (local + upstream)
-mise run recipe wordpress        # WordPress + MariaDB at https://wordpress.<your-domain>
-mise run recipe imaginary        # libvips image API (h2non/imaginary) at https://img.<your-domain>
-mise run recipe moltis           # self-hosted AI agent server at https://moltis.<your-domain>
-mise run recipe wordpress-galera # EXPERIMENTAL — multi-master Galera WordPress (needs node_count >= 3)
-mise run recipe nats             # upstream catalog
+mise run recipe                  # list
+mise run recipe wordpress        # WordPress + MariaDB
+mise run recipe imaginary        # libvips image API (h2non/imaginary)
+mise run recipe moltis           # self-hosted AI agent server
+mise run recipe wordpress-galera # EXPERIMENTAL — multi-master (needs node_count >= 3)
 ```
 
-A recipe is a folder — `compose.yaml` plus an optional `prepare.nu`. `recipe.nu` is generic: it injects `${DOMAIN}`, and if the recipe ships a `prepare.nu` it runs it (stdout = JSON env merged into the deploy, stderr = notes) so each recipe owns its config — no recipe-specific logic in the shared script.
+A recipe is a folder: `compose.yaml` + optional `prepare.nu` (generates and persists its own secrets). Adding one touches no shared code.
 
-Generated credentials (DB passwords, the imaginary API key, the moltis token) are **persisted** via [`scripts/secrets.nu`](scripts/secrets.nu): created once, stored in the OS keychain (pointers in the gitignored `fnox.secrets.toml`), and reused on every deploy — so a redeploy never invalidates a persistent volume's password. (When [Uncloud ships native `secrets:`](https://github.com/psviderski/uncloud/pull/385), recipes move to that — issue #1.)
-
-Add upstream sources in [`recipes.toml`](recipes.toml):
-
-```toml
-[[sources]]
-name = "uncloud-recipes"
-url  = "https://github.com/psviderski/uncloud-recipes"
-```
-
-## Tracking what's on what servers
-
-| Source | Answers | Lives |
-|--------|---------|-------|
-| `uc machine ls` / `uc ls` | live machines + running services | while the cluster exists |
-| `tofu/*.tfstate` | which cloud resources exist | while infra exists |
-| `state/log.jsonl` | full up / deploy / down history | forever (git) |
-
-`up`, `recipe`, and `down` append a timestamped JSON line to `state/log.jsonl`; `mise run status` shows all three layers. Commit the ledger to share the inventory.
-
-### Remote state in R2
-
-Move tofu state off your laptop into Cloudflare R2 — durable and lockable (OpenTofu's native lockfile, no DynamoDB):
+## State
 
 ```bash
-mise run state:remote     # creates the vm-uncloud-tfstate bucket + migrates state to R2
+mise run status        # machines, services, history
+mise run state:remote  # move tofu state to Cloudflare R2 (durable, lockable)
 ```
 
-Your `CLOUDFLARE_API_TOKEN` is the R2 credential: Cloudflare accepts `access_key_id = token id`, `secret = sha256(token)` for the R2 S3 API. `scripts/r2.nu` re-derives this at run time — nothing is stored — and `up`/`down`/`status` load it automatically. Needs `CLOUDFLARE_ACCOUNT_ID` in fnox and a token with R2 read/write. The generated `backend.tf`/`backend.hcl` are gitignored.
-
-`tofu` authenticates with `HCLOUD_TOKEN`, which may target a different Hetzner project than your `hcloud` CLI context. Verify with `fnox exec -- hcloud server list`, not a bare `hcloud server list`.
+`state/log.jsonl` is the up/deploy/down ledger (in git). `tofu` uses `HCLOUD_TOKEN` — verify infra with `fnox exec -- hcloud server list`, not bare `hcloud`.
 
 ## External services
 
-Front non-container services — a BMC, HomeAssistant, a NAS, your `vm-servers` box — through the cluster's Caddy on your domain:
+Front non-container hosts (BMC, HomeAssistant, NAS) through Caddy:
 
 ```bash
-cp caddy/external.caddyfile.example caddy/external.caddyfile
-$EDITOR caddy/external.caddyfile
+cp caddy/external.caddyfile.example caddy/external.caddyfile   # edit it
 mise run caddy:external
 ```
 
 ## Checks
 
-`mise run ci` runs `tofu fmt` + `validate`, parses every script, runs each recipe's `prepare.nu`, and parses every `compose.yaml`. The same command runs on every push via [`.github/workflows/check.yml`](.github/workflows/check.yml) — a thin wrapper around `mise run ci`, no logic in the YAML.
+`mise run ci` (and every push, via [`.github/workflows/check.yml`](.github/workflows/check.yml)) — tofu fmt/validate, parse scripts, run each `prepare.nu`, parse composes.
 
 ## Troubleshooting
 
-**HTTPS cert missing.** Check Caddy on the box: `docker logs $(docker ps -qf name=caddy) 2>&1 | grep -iE 'acme|obtain|error'`. The Caddy service must be the `caddybuilds/caddy-cloudflare` image with `CLOUDFLARE_API_TOKEN` in its environment (`uc ls` to confirm). macOS can negative-cache a name from before the record existed — run `sudo dscacheutil -flushcache`, or test with `curl --resolve <host>:443:<ip>`.
+- **No cert** — `docker logs $(docker ps -qf name=caddy) | grep -i acme`. Caddy must be `caddybuilds/caddy-cloudflare` with `CLOUDFLARE_API_TOKEN` set.
+- **`could not open TTY`** — run from a real terminal, not CI.
+- **`context not found`** — must match `$UNCLOUD_CONTEXT` (`hetzner`); `mise run up` sets it.
 
-**`could not open TTY`.** `uc machine init` and `uc ctx` need a real terminal — run from an interactive shell, not headless/CI.
+## vm-* family
 
-**`context not found`.** The cluster context must match `$UNCLOUD_CONTEXT` (default `hetzner`); `mise run up` creates it with that name.
+[vm-uncloud](.) — Linux apps/containers · [vm-servers](https://github.com/joeblew999/vm-servers) — Windows VMs · [vm-software](https://github.com/joeblew999/vm-software) — Windows installers.
