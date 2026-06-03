@@ -9,6 +9,7 @@
 # Records a deploy event in state/log.jsonl.
 
 use r2.nu *
+use cluster.nu *
 
 def sources [] {
   if not ("recipes.toml" | path exists) { return [] }
@@ -42,16 +43,13 @@ def list_recipes [] {
   }
 }
 
-# wordpress.<domain> from tofu state, unless WP_DOMAIN is set explicitly.
+# wordpress.<domain> from the cluster's single source of truth, unless WP_DOMAIN
+# is set explicitly.
 def wp_domain [] {
   let explicit = ($env.WP_DOMAIN? | default "")
   if ($explicit | is-not-empty) { return $explicit }
-  let d = (^tofu -chdir=tofu output -raw domain | complete)
-  if ($d.exit_code == 0) {
-    let dom = ($d.stdout | str trim)
-    if ($dom | is-not-empty) { return $"wordpress.($dom)" }
-  }
-  ""
+  let dom = (cluster-domain)
+  if ($dom | is-empty) { "" } else { $"wordpress.($dom)" }
 }
 
 def main [recipe?: string] {

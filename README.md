@@ -95,14 +95,16 @@ Secrets live in the macOS keychain (service `fnox`) and are injected by `fnox ex
 
 ## Deploy apps — and the fast update loop
 
-The best integration is **one command**. Give a service a `build:` section and `mise run deploy` does the whole loop — build locally, push only the **changed layers** over SSH (uncloud's built-in registry — no external registry, no rebuild on the server), then roll out with health checks. Pick any subdomain; the wildcard record + cert already cover it.
+The best integration is **one command**. Give a service a `build:` section and `mise run deploy` does the whole loop — build locally, push only the **changed layers** over SSH (uncloud's built-in registry — no external registry, no rebuild on the server), then roll out with health checks.
+
+**Don't hardcode your domain.** Define it once (`domain` in `tofu/terraform.tfvars`); use `${DOMAIN}` in compose. `mise run deploy` reads the domain from tofu state and injects it, so any subdomain just resolves (wildcard record) and is covered by the wildcard cert. Change domains = edit one line in tfvars, re-`up`, re-`deploy`.
 
 ```yaml title="compose.yaml"
 services:
   api:
     build: .                          # your Dockerfile
     x-ports:
-      - api.amplifycms.net:8080/https
+      - api.${DOMAIN}:8080/https      # ${DOMAIN} injected at deploy — not hardcoded
 ```
 ```bash
 mise run deploy        # build (local Docker) + push changed layers + rolling deploy — one command

@@ -1,6 +1,7 @@
-# Default example: a public image on your domain. Any subdomain under your
-# domain works out of the box — the wildcard *.<domain> record + wildcard cert
-# (issued at cluster bring-up) already cover it. Just change the hostname.
+# Default example: a public image on your domain. The host is NOT hardcoded —
+# ${DOMAIN} is injected by `mise run deploy` from your single source of truth
+# (domain in tofu/terraform.tfvars). The wildcard *.<domain> record + cert
+# already cover any subdomain. Change "app" to whatever you like.
 #
 #   mise run deploy        # deploys this
 #
@@ -10,4 +11,4 @@ services:
   whoami:
     image: traefik/whoami:latest
     x-ports:
-      - app.amplifycms.net:80/https
+      - app.${DOMAIN}:80/https
