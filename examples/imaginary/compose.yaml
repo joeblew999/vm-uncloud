@@ -1,0 +1,22 @@
+# imaginary — fast libvips HTTP image-processing microservice with a clean REST
+# API built to be called by other systems: /resize, /crop, /thumbnail, /smartcrop,
+# /rotate, /pipeline, /info, /health. Source images come from `?url=` (including
+# Cloudflare R2) or a multipart upload; auth via the `API-Key` header.
+# Published at https://img.<your-domain>.
+#
+#   mise run recipe imaginary
+#
+# Example (R2 source -> 300px webp):
+#   curl -H "API-Key: <key>" \
+#     "https://img.<domain>/resize?url=https://<r2-bucket-host>/photo.jpg&width=300&type=webp" -o out.webp
+#
+# R2: -enable-url-source lets imaginary fetch from any URL, so point ?url= at a
+# public R2 bucket (r2.dev or a custom domain) or a presigned R2 URL.
+services:
+  imaginary:
+    image: h2non/imaginary:1.2.4
+    command: -enable-url-source -cors -concurrency 20 -http-cache-ttl 86400 -api-key ${IMAGINARY_API_KEY}
+    environment:
+      MALLOC_ARENA_MAX: "2"
+    x-ports:
+      - img.${DOMAIN}:9000/https

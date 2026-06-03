@@ -105,11 +105,11 @@ There is no registry to run. Uncloud embeds [unregistry](https://github.com/psvi
 ```bash
 mise run recipe            # list everything (local + upstream)
 mise run recipe wordpress  # local example — WordPress + MariaDB at https://wordpress.<your-domain>
-mise run recipe imgproxy   # local example — libvips image transforms at https://img.<your-domain>
+mise run recipe imaginary  # local example — libvips image API (h2non/imaginary) at https://img.<your-domain>
 mise run recipe nats       # upstream catalog
 ```
 
-A recipe is a folder — `compose.yaml` plus any `.env`/config files — and `recipe` runs `uc deploy` from that folder so Uncloud finds the relative files. `recipe wordpress` derives its hostname from the cluster domain (override with `WP_DOMAIN=...`) and generates DB credentials; per-recipe wiring lives in `scripts/recipe.nu`. Add upstream sources in [`recipes.toml`](recipes.toml):
+A recipe is a folder — `compose.yaml` plus an optional `prepare.nu`. `recipe.nu` is generic: it injects `${DOMAIN}`, and if the recipe ships a `prepare.nu` it runs it (stdout = JSON env merged into the deploy, stderr = notes) so each recipe owns its own config — no recipe-specific logic in the shared script. `recipe imaginary` prints a generated API key (send as the `API-Key` header; set `IMAGINARY_API_KEY` to pin it) and serves transforms from `?url=` sources including R2. Add upstream sources in [`recipes.toml`](recipes.toml):
 
 ```toml
 [[sources]]
