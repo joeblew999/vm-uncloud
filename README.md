@@ -105,9 +105,20 @@ services:
       - api.amplifycms.net:8080/https
 ```
 ```bash
-uc image push your/api:latest                  # ship a local image to the cluster (built-in, no registry)
 mise run deploy
 ```
+
+### Fast updates — push local images straight to the cluster
+
+Uncloud's registry (unregistry) is **built in**, so the fast dev loop is: change code → push → live in seconds. Only the **changed layers** transfer over SSH — no rebuild on the server, no external registry, no `docker pull`.
+
+```bash
+mise run push                 # uc build --push: build Compose services locally + push to machines
+mise run push your/api:1.2.3  # uc image push: push an image you already built
+mise run deploy               # roll it out
+```
+
+Local Docker (e.g. [OrbStack](https://orbstack.dev) on a Mac) is only the daemon `uc build` uses to build — the push itself is `uc`'s, no plugin.
 
 ## Where do apps live? (this repo vs yours)
 

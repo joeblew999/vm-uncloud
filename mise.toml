@@ -9,10 +9,10 @@
 # Secrets come from fnox (keychain) -> mise tasks. Never hand-edit a .env / .tfvars file.
 
 [tools]
-opentofu = "1.10.7"
-hcloud   = "1.51.0"
-fnox     = "1.19.0"
-"github:nushell/nushell[exe=nu]" = "0.108.0"
+opentofu = "1.12.1"
+hcloud   = "1.65.0"
+fnox     = "1.25.1"
+"github:nushell/nushell[exe=nu]" = "0.113.1"
 
 [env]
 # Cluster context name `uc` uses.
@@ -43,6 +43,10 @@ run = "fnox exec -- nu scripts/up.nu"
 [tasks.deploy]
 description = "Deploy services from compose.yaml to the cluster"
 run = "fnox exec -- nu scripts/deploy.nu"
+
+[tasks.push]
+description = "Ship local Docker images to the cluster (uc build --push, or: mise run push <image>)"
+run = "nu scripts/push.nu"
 
 [tasks.down]
 description = "Destroy the server and remove its Cloudflare DNS records"
