@@ -1,6 +1,6 @@
 # Examples — uncloud-recipes
 
-Ready-made services from the upstream [psviderski/uncloud-recipes](https://github.com/psviderski/uncloud-recipes) collection. We **reference** that repo rather than copying it: `mise run recipe <name>` shallow-clones it into `.src/uncloud-recipes/` (gitignored) and deploys the chosen recipe to your cluster.
+Ready-made services from recipe repos. We **reference** them rather than copying: `mise run recipe <name>` shallow-clones each source in [`../recipes.toml`](../recipes.toml) into `.src/<source>/` (gitignored), finds `<name>/compose.yaml`, and deploys it. Default source is the upstream [psviderski/uncloud-recipes](https://github.com/psviderski/uncloud-recipes); add your own repos to `recipes.toml`.
 
 ```bash
 mise run up                              # cluster must exist first
@@ -31,4 +31,4 @@ WP_DOMAIN=wordpress.amplifycms.net mise run recipe wordpress-mariadb
 
 ## How recipes are run (and why this way)
 
-Recipes ship as a **folder** (compose + `.env` + config files like `nats-server.conf`), so a single-file remote deploy won't work — Uncloud resolves those relative paths from the compose file's location. Cloning the folder into `.src/` and running `uc deploy -f .src/uncloud-recipes/<name>/compose.yaml` keeps upstream pristine and lets Uncloud find everything it needs. Add per-recipe env wiring in [`../scripts/recipe.nu`](../scripts/recipe.nu) as you adopt more.
+Recipes ship as a **folder** (compose + `.env` + config files like `nats-server.conf`), so a single-file remote deploy won't work — Uncloud resolves those relative paths from the compose file's location. Cloning the folder into `.src/` and running `uc deploy -f .src/<source>/<name>/compose.yaml` keeps upstream pristine and lets Uncloud find everything it needs. Add per-recipe env wiring in [`../scripts/recipe.nu`](../scripts/recipe.nu) as you adopt more, and new recipe repos in [`../recipes.toml`](../recipes.toml).

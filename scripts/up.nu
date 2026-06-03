@@ -34,18 +34,34 @@ def main [] {
   let key = (ssh_key_file)
   for ip in $ips { prepare_host $ip $key }
 
+  # Context name MUST match $UNCLOUD_CONTEXT — `uc machine init` does NOT read
+  # that env var (it defaults the new context to "default"), so we pass it
+  # explicitly. Otherwise deploy/recipe/down would look for a context the init
+  # step never created.
+  let ctx = ($env.UNCLOUD_CONTEXT? | default "hetzner")
+
   # First node initialises the cluster; the rest join the WireGuard mesh.
   # --no-dns: we manage DNS ourselves via Cloudflare, so skip the uncld.dev rental.
   $ips | enumerate | each {|row|
     let ip = $row.item
+    let mname = $"($ctx)-($row.index + 1)"
     if $row.index == 0 {
-      print $"==> uc machine init root@($ip) --no-dns"
-      ^uc machine init $"root@($ip)" --no-dns -i $key -y
+      print $"==> uc machine init root@($ip) --context ($ctx) --name ($mname) --no-dns"
+      ^uc machine init $"root@($ip)" --context $ctx --name $mname --no-dns -i $key -y
     } else {
-      print $"==> uc machine add root@($ip)"
-      ^uc machine add $"root@($ip)" -i $key -y
+      print $"==> uc machine add root@($ip) --context ($ctx) --name ($mname)"
+      ^uc machine add $"root@($ip)" --context $ctx --name $mname -i $key -y
     }
   }
+
+  # Record an 'up' event in the ledger (best-effort). Omit --fqdns when empty:
+  # nushell drops empty-string flag values when invoking a script.
+  let fqstr = ($fqdns | str join ",")
+  do {
+    let base = [up --cluster $ctx --ips ($ips | str join ",") --server-type $out.server_type.value --location $out.location.value]
+    let args = (if ($fqstr | is-empty) { $base } else { $base | append [--fqdns $fqstr] })
+    nu state/log.nu ...$args
+  } | ignore
 
   print ""
   print "Cluster is up. Next:"

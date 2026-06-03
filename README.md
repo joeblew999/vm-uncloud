@@ -84,13 +84,45 @@ mise run deploy
 docker pussh your/api:latest root@<node-ip>   # push private images, no registry
 ```
 
+## Where do apps live? (this repo vs yours)
+
+This repo is the **platform** — it stands up clusters and knows how to deploy onto them. It is *not* where your apps live:
+
+- **Demo/recipe apps** (like WordPress) are **referenced, never vendored.** `mise run recipe <name>` pulls them from upstream recipe repos into `.src/` (gitignored) at deploy time. Nothing app-specific is committed here.
+- **Your real apps** keep their own `compose.yaml` in their own repo, and you deploy it with `uc deploy -f path/to/compose.yaml` (or copy this repo's `deploy` pattern). Keeps the platform reusable and your app history with the app.
+
 ## Examples (recipes)
 
-Ready-made services from [uncloud-recipes](https://github.com/psviderski/uncloud-recipes) — see [`examples/`](examples/):
+Ready-made services from recipe repos — see [`examples/`](examples/):
 
 ```bash
-mise run recipe wordpress-mariadb   # clones the recipes into .src/ and deploys
+mise run recipe                     # list available recipes
+mise run recipe wordpress-mariadb   # deploy one
 ```
+
+**Adding more is one line.** Recipe sources live in [`recipes.toml`](recipes.toml) — a list of git repos laid out as `<name>/compose.yaml`. `recipe` clones each into `.src/` and searches them in order, so you can mix the upstream [uncloud-recipes](https://github.com/psviderski/uncloud-recipes) with your own:
+
+```toml
+[[sources]]
+name = "uncloud-recipes"
+url  = "https://github.com/psviderski/uncloud-recipes"
+
+[[sources]]
+name = "my-recipes"
+url  = "https://github.com/joeblew999/my-uncloud-recipes"
+```
+
+## Tracking what's on what servers
+
+Three layers, each the right tool for its question:
+
+| Source | Answers | Lives |
+|--------|---------|-------|
+| `uc machine ls` / `uc ls` | live machines + running services | while the cluster exists |
+| `tofu/*.tfstate` | exactly which cloud resources exist | while infra exists |
+| `state/log.jsonl` | full up/deploy/down **history** | forever (git) |
+
+`up`, `recipe`, and `down` append typed events to [`state/log.jsonl`](state/) automatically. `mise run status` shows all three. Commit the ledger to share the inventory.
 
 ## External services (bare metal, BMC, home hubs)
 

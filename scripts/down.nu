@@ -21,6 +21,7 @@ def main [] {
 
   # Prune the local uncloud context that pointed at the destroyed machine.
   let ctx = ($env.UNCLOUD_CONTEXT? | default "")
+  if ($ctx | is-not-empty) { do { nu state/log.nu down --cluster $ctx } | ignore }
   let cfg = ($nu.home-path | path join ".config" "uncloud" "config.yaml")
   if ($ctx | is-not-empty) and ($cfg | path exists) {
     let data = (open $cfg)

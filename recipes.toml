@@ -1,0 +1,13 @@
+# Recipe sources — git repos that contain <name>/compose.yaml folders.
+# `mise run recipe <name>` clones each into .src/<name> and searches them in
+# order, deploying the first match. Add your own repos here — that's the whole
+# "how to add more" story.
+
+[[sources]]
+name = "uncloud-recipes"
+url = "https://github.com/psviderski/uncloud-recipes"
+
+# Your own recipes — uncomment and point at any repo laid out the same way:
+# [[sources]]
+# name = "my-recipes"
+# url = "https://github.com/joeblew999/my-uncloud-recipes"

@@ -21,4 +21,12 @@ def main [] {
   print ""
   print "=== Services (uncloud) ==="
   ^uc ls
+
+  print ""
+  print "=== History (state/log.jsonl, last 10) ==="
+  if ("state/log.jsonl" | path exists) {
+    open state/log.jsonl | lines | last 10 | each {|l| $l | from json} | table
+  } else {
+    print "  (no events yet)"
+  }
 }

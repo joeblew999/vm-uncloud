@@ -21,3 +21,11 @@ output "fqdns" {
 output "cluster_name" {
   value = var.cluster_name
 }
+
+output "server_type" {
+  value = var.server_type
+}
+
+output "location" {
+  value = var.location
+}

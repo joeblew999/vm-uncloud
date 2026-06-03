@@ -1,33 +1,56 @@
 #!/usr/bin/env nu
-# Deploy a ready-made recipe from psviderski/uncloud-recipes.
+# Deploy a ready-made recipe by name, searching every source in recipes.toml.
 #
 #   mise run recipe wordpress-mariadb       # needs WP_DOMAIN (a hostname you A-recorded)
 #   mise run recipe nats
-#   mise run recipe postgres
+#   mise run recipe                         # lists all available recipes
 #
-# Clones the recipes into .src/ on first use, injects any required env, then
-# `uc deploy -y` from the recipe folder (uncloud resolves the recipe's relative
-# .env / config files for us).
+# Syncs the source repos into .src/ on first use, injects any required env,
+# then `uc deploy -y` from the recipe folder (uncloud resolves the recipe's
+# relative .env / config files), and records a deploy event in state/log.jsonl.
+
+def sources [] {
+  if not ("recipes.toml" | path exists) { return [] }
+  (open recipes.toml | get sources? | default [])
+}
+
+# Find <recipe>/compose.yaml across all synced sources; return its path or "".
+def find_recipe [recipe: string] {
+  for s in (sources) {
+    let compose = $".src/($s.name)/($recipe)/compose.yaml"
+    if ($compose | path exists) { return $compose }
+  }
+  ""
+}
+
+def list_recipes [] {
+  for s in (sources) {
+    let root = $".src/($s.name)"
+    if ($root | path exists) {
+      print $"  [($s.name)]"
+      ls $root | where type == dir | get name | path basename
+        | where {|n| ($"($root)/($n)/compose.yaml" | path exists)}
+        | each {|n| print $"    - ($n)"}
+    }
+  }
+}
 
 def main [recipe?: string] {
-  if ($recipe | is-empty) {
-    print "Usage: mise run recipe <name>   (e.g. wordpress-mariadb, nats, postgres)"
-    print "Available recipes:"
-    if (".src/uncloud-recipes" | path exists) {
-      ls .src/uncloud-recipes | where type == dir | get name | path basename | each {|n| print $"  - ($n)"}
-    } else { print "  (run any recipe to fetch the list)" }
-    exit 1
-  }
-
   nu scripts/recipes-sync.nu
-  let dir = $".src/uncloud-recipes/($recipe)"
-  let compose = $"($dir)/compose.yaml"
-  if not ($compose | path exists) {
-    print $"ERROR: no compose.yaml for recipe '($recipe)' at ($compose)"
+  if ($recipe | is-empty) {
+    print "Usage: mise run recipe <name>. Available recipes:"
+    list_recipes
     exit 1
   }
 
-  # Per-recipe env. Add cases here as you adopt more recipes.
+  let compose = (find_recipe $recipe)
+  if ($compose | is-empty) {
+    print $"ERROR: recipe '($recipe)' not found in any source. Available:"
+    list_recipes
+    exit 1
+  }
+
+  # Per-recipe env. Add cases here as you adopt more recipes that need config.
   let envs = (match $recipe {
     "wordpress-mariadb" => {
       let domain = ($env.WP_DOMAIN? | default "")
@@ -49,6 +72,17 @@ def main [recipe?: string] {
 
   print $"==> uc deploy -f ($compose) -y"
   with-env $envs { ^uc deploy -f $compose -y }
+
+  # Record in the ledger (best-effort). Omit --host when empty (nushell drops
+  # empty-string flag values passed to a script).
+  let cluster = ($env.UNCLOUD_CONTEXT? | default "")
+  let host = ($env.WP_DOMAIN? | default "")
+  do {
+    let base = [deploy --cluster $cluster --service $recipe]
+    let args = (if ($host | is-empty) { $base } else { $base | append [--host $host] })
+    nu state/log.nu ...$args
+  } | ignore
+
   print ""
   print "Deployed. Check: mise run status"
 }
