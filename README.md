@@ -95,6 +95,25 @@ mise run caddy:external
 - **`could not open TTY`** — run from a real terminal, not CI.
 - **`context not found`** — must match `$UNCLOUD_CONTEXT` (`hetzner`); `mise run up` sets it.
 
-## vm-* family
+## Scope & the vm-* family
 
-[vm-uncloud](.) — Linux apps/containers · [vm-servers](https://github.com/joeblew999/vm-servers) — Windows VMs · [vm-software](https://github.com/joeblew999/vm-software) — Windows installers.
+This repo is the **single home for our Hetzner deployments** — one provisioning
+idiom (tofu + `fnox` secrets), one cost ledger, no per-project bespoke scripts.
+It hosts **two lifecycle modes** that share that base but stay deliberately
+separate, because their cost models are opposite:
+
+| Mode | Workload | Lifecycle | Cost posture |
+|---|---|---|---|
+| **cluster** (here today) | Linux containers — Moltis, WordPress, any web service | **always-on** uncloud node; many services, each on a `*.<domain>` subdomain | one small node 24/7 (`cpx22` ≈ €7.55/mo) |
+| **vm** (folding in from [vm-servers](https://github.com/joeblew999/vm-servers)) | Windows desktop — Revit + Revit Batch Processor via [dockur/windows](https://github.com/dockur/windows) | **ephemeral**: provision → run batch → snapshot → destroy | ~€0.48/mo idle; pay the big box only while a batch runs |
+
+**Why Windows is NOT an uncloud service.** dockur/windows is a container, so uncloud
+*could* run it — but it shouldn't: it needs `/dev/kvm` for usable speed (Hetzner
+Cloud has none → TCG-slow), uncloud has no disk-snapshot for the Windows state, and
+co-hosting it on the shared always-on node would force that node up to `cpx42` 24/7
+— a cost blow-out. So the `vm` mode keeps its own snapshot→destroy VM and RDP, and
+just shares this repo's provisioning + secrets + cost ledger. uncloud is used where
+it shines (containers), not contorted to host a VM.
+
+Sibling: [vm-software](https://github.com/joeblew999/vm-software) — the Windows
+installers that run *inside* the guest (different execution context, stays separate).
