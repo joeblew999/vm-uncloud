@@ -8,7 +8,18 @@
 services:
   caddy:
     image: caddybuilds/caddy-cloudflare:2.10.2
-    command: caddy run -c /config/Caddyfile
+    # uncloud appends a trailing newline to every injected env value. A `\n` on
+    # CLOUDFLARE_API_TOKEN makes the Cloudflare DNS-01 plugin reject it ("token
+    # appears invalid"), so no wildcard cert is ever issued. Strip CR/LF at
+    # runtime before Caddy reads them. `$$` escapes compose interpolation so the
+    # container shell expands the vars — not uncloud at deploy time.
+    command:
+      - sh
+      - -c
+      - |
+        export CLOUDFLARE_API_TOKEN="$$(printf '%s' "$$CLOUDFLARE_API_TOKEN" | tr -d '\r\n')"
+        export DOMAIN="$$(printf '%s' "$$DOMAIN" | tr -d '\r\n')"
+        exec caddy run -c /config/Caddyfile
     environment:
       CADDY_ADMIN: unix//run/caddy/admin.sock
       DOMAIN: ${DOMAIN}

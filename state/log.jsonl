@@ -1,0 +1,2 @@
+{"event":"up","cluster":"hetzner","ips":"178.105.27.104","server_type":"cpx22","location":"fsn1","fqdns":"*.amplifycms.com","ts":"2026-06-05T14:12:02+0700"}
+{"event":"deploy","cluster":"hetzner","service":"moltis","host":"moltis.amplifycms.com","ts":"2026-06-05T14:13:20+0700"}

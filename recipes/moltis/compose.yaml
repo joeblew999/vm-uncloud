@@ -13,6 +13,10 @@ services:
     image: ghcr.io/moltis-org/moltis:latest
     environment:
       MOLTIS_BEHIND_PROXY: "true"
+      # Caddy fronts Moltis and terminates TLS (x-ports `.../https`), forwarding
+      # plain HTTP to port 13131. Moltis (>=20260603) refuses to start with
+      # BEHIND_PROXY + its own TLS on, so disable Moltis-side TLS here.
+      MOLTIS_NO_TLS: "true"
       MOLTIS_TOKEN: ${MOLTIS_TOKEN}
     volumes:
       - moltis_config:/home/moltis/.config/moltis
