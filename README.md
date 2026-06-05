@@ -51,7 +51,7 @@ mise watch deploy      # re-deploy on save
 mise run push [image]  # push only — built-in registry, no docker pull
 ```
 
-Building needs local Docker (e.g. OrbStack on a Mac); the push is `uc`'s own.
+Building needs local Docker (e.g. OrbStack on a Mac); the push is `uc`'s own. Build arch must match the server: `cpx22` is x86, so build `linux/amd64` (set `platform: linux/amd64` on the service) — or use `cax11` ARM nodes to match an Apple-silicon Mac.
 
 ## Recipes
 
