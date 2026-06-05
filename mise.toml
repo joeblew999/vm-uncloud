@@ -93,6 +93,15 @@ hide = true
 run = "fnox exec -- nu scripts/smoke.nu"
 
 # ---------------------------------------------------------------------------
+# Costs — queryable Hetzner/Vultr/R2 price model (state/costs.jsonl). Use it
+# to pick a node class per workload (cpx22 cluster vs cpx42 Windows vs KVM BM).
+# ---------------------------------------------------------------------------
+[tasks."costs:show"]
+description = "Print state/costs.jsonl as a table — provider/SKU pricing to size nodes per workload."
+shell = "nu --commands"
+run = "open state/costs.jsonl | lines | each {|l| $l | from json } | table -e"
+
+# ---------------------------------------------------------------------------
 # Secrets — one-time keychain population. Run these once per machine.
 #   mise run secrets:set   then paste each token.
 # ---------------------------------------------------------------------------
