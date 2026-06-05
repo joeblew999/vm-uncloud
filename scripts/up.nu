@@ -4,15 +4,11 @@
 #
 # Tokens (HCLOUD_TOKEN, CLOUDFLARE_API_TOKEN) are injected by `fnox exec` from
 # the keychain; the tofu providers read them straight from the environment.
-# SSH uses $SSH_KEY_FILE (default ~/.ssh/gedw99_hetzner).
+# SSH key comes from tofu (var ssh_private_key_file, set in terraform.tfvars).
 
 use r2.nu *
 
 const TOFU = ["-chdir=tofu"]
-
-def ssh_key_file [] {
-  ($env.SSH_KEY_FILE? | default "~/.ssh/gedw99_hetzner" | path expand)
-}
 
 def main [] {
   # If remote (R2) state is active, derive its S3 creds from the CF token so
@@ -41,7 +37,7 @@ def main [] {
   print $"==> Servers: ($ips | str join ', ')"
   if ($domain | is-not-empty) { print $"==> Wildcard: ($wildcard) -> ($ips | get 0)" }
 
-  let key = (ssh_key_file)
+  let key = ($out.ssh_private_key_file.value | path expand)
   # Clear stale host keys (Hetzner recycles IPs) so client-side `uc machine init`
   # doesn't trip on a mismatched known_hosts entry. One-shot, not a poll.
   for ip in $ips { ^ssh-keygen -R $ip out+err> /dev/null }

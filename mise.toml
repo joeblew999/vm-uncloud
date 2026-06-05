@@ -18,10 +18,8 @@ fnox     = "1.25.1"
 # Cluster context name `uc` uses.
 UNCLOUD_CONTEXT = "hetzner"
 TF_IN_AUTOMATION = "1"
-# SSH access to the Hetzner machines — matches the key name in your Hetzner
-# project and the local private key path (same contract as vm-servers).
-SSH_KEY      = "gedw99_hetzner"
-SSH_KEY_FILE = "~/.ssh/gedw99_hetzner"
+# SSH keys are NOT set here — they live once in tofu/terraform.tfvars
+# (ssh_key_name + ssh_private_key_file) and flow to the scripts via tofu output.
 
 # ---------------------------------------------------------------------------
 # Setup — install the two LOCAL binaries Uncloud needs. Everything server-side

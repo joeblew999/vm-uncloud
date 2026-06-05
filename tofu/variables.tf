@@ -61,9 +61,9 @@ variable "ssh_key_name" {
 }
 
 variable "ssh_private_key_file" {
-  description = "Local private key path for the readiness provisioner (matches ssh_key_name)"
+  description = "Local private key path matching ssh_key_name (used by the readiness provisioner and uc machine init)"
   type        = string
-  default     = "~/.ssh/gedw99_hetzner"
+  default     = "~/.ssh/id_ed25519"
 }
 
 variable "ssh_allowed_ips" {

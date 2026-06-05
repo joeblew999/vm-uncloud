@@ -6,12 +6,17 @@
 use r2.nu *
 
 const TOFU = ["-chdir=tofu"]
+# Override only the throwaway bits; ssh_key_name (and server_type/location) come
+# from terraform.tfvars — nothing user-specific hardcoded here.
 const VARS = ["-var=cluster_name=uncloud-smoke" "-var=node_count=1"
-              "-var=ssh_key_name=gedw99_hetzner"
               "-var=domain=" "-var=cloudflare_zone_id="]
 
 def main [] {
   load-env (r2-creds)   # R2 state creds (no-op for local state)
+  if not ("tofu/terraform.tfvars" | path exists) {
+    print "ERROR: tofu/terraform.tfvars not found (needed for ssh_key_name)."
+    exit 1
+  }
   print "==> tofu init"
   ^tofu ...$TOFU init -input=false
   print "==> tofu apply (throwaway box, no DNS)"

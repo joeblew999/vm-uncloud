@@ -33,3 +33,7 @@ output "server_type" {
 output "location" {
   value = var.location
 }
+
+output "ssh_private_key_file" {
+  value = var.ssh_private_key_file
+}
