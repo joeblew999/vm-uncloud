@@ -62,6 +62,7 @@ mise run recipe                  # list
 mise run recipe wordpress        # WordPress + MariaDB
 mise run recipe imaginary        # libvips image API (h2non/imaginary)
 mise run recipe moltis           # self-hosted AI agent server
+mise run recipe windows          # Windows desktop (dockur/windows) — see Virtual desktops
 mise run recipe wordpress-galera # EXPERIMENTAL — multi-master (needs node_count >= 3)
 ```
 
@@ -95,25 +96,29 @@ mise run caddy:external
 - **`could not open TTY`** — run from a real terminal, not CI.
 - **`context not found`** — must match `$UNCLOUD_CONTEXT` (`hetzner`); `mise run up` sets it.
 
-## Scope & the vm-* family
+## Virtual desktops (Windows)
 
-This repo is the **single home for our Hetzner deployments** — one provisioning
-idiom (tofu + `fnox` secrets), one cost ledger, no per-project bespoke scripts.
-It hosts **two lifecycle modes** that share that base but stay deliberately
-separate, because their cost models are opposite:
+This repo is the **single home for our Hetzner deployments** — one tool
+(uncloud), one provisioning idiom (tofu + `fnox` secrets), one cost ledger. That
+includes virtual desktops: **`dockur/windows` is just a container, so it runs as
+an uncloud recipe** — no bespoke parallel lifecycle.
 
-| Mode | Workload | Lifecycle | Cost posture |
-|---|---|---|---|
-| **cluster** (here today) | Linux containers — Moltis, WordPress, any web service | **always-on** uncloud node; many services, each on a `*.<domain>` subdomain | one small node 24/7 (`cpx22` ≈ €7.55/mo) |
-| **vm** (folding in from [vm-servers](https://github.com/joeblew999/vm-servers)) | Windows desktop — Revit + Revit Batch Processor via [dockur/windows](https://github.com/dockur/windows) | **ephemeral**: provision → run batch → snapshot → destroy | ~€0.48/mo idle; pay the big box only while a batch runs |
+```bash
+mise run recipe windows    # deploy dockur/windows as an uncloud service
+```
 
-**Why Windows is NOT an uncloud service.** dockur/windows is a container, so uncloud
-*could* run it — but it shouldn't: it needs `/dev/kvm` for usable speed (Hetzner
-Cloud has none → TCG-slow), uncloud has no disk-snapshot for the Windows state, and
-co-hosting it on the shared always-on node would force that node up to `cpx42` 24/7
-— a cost blow-out. So the `vm` mode keeps its own snapshot→destroy VM and RDP, and
-just shares this repo's provisioning + secrets + cost ledger. uncloud is used where
-it shines (containers), not contorted to host a VM.
+Two things stay distinct (don't conflate them):
 
-Sibling: [vm-software](https://github.com/joeblew999/vm-software) — the Windows
-installers that run *inside* the guest (different execution context, stays separate).
+- **Capability** (done): `recipes/windows/` makes uncloud run the desktop. RDP on
+  `:3389` (authenticated), noVNC viewer on `:8006` (no auth — SSH-tunnel it). On
+  Hetzner Cloud `KVM=N` (TCG, ~5-10x slower; KVM-fast needs a `/dev/kvm` node).
+- **Placement** (open): *which node class runs which workload.* Windows is heavy
+  (~cpx42, 8/16) and bursty, so it shouldn't share the always-on `cpx22` Moltis
+  node — ideally a **dedicated, teardownable node** you `up` → `recipe windows` →
+  snapshot → `down`, so it's only billed while in use. Wiring that (a 2nd node /
+  context + a `:3389` firewall rule) is tracked separately.
+
+Supersedes the old standalone [vm-servers](https://github.com/joeblew999/vm-servers)
+repo (bespoke hcloud + cloud-init lifecycle). Sibling
+[vm-software](https://github.com/joeblew999/vm-software) — the Windows installers
+that run *inside* the guest (different execution context, stays separate).

@@ -1,0 +1,58 @@
+# Windows desktop — dockur/windows run as an uncloud service. This is the
+# uncloud-native way to do desktop virt: dockur/windows is just a container,
+# so it deploys like any other recipe. Same as the bespoke vm-servers lifecycle
+# used to do, but through `mise run recipe windows` + the uncloud up/down flow.
+#
+#   mise run recipe windows
+#
+# ── SIZING / PLACEMENT ──────────────────────────────────────────────────────
+# Windows is heavy: the RAM_SIZE/CPU_CORES below assume a cpx42-class node
+# (8 vCPU / 16 GB). It will NOT run on the cpx22 Moltis node. WHICH node this
+# lands on is the separate "server class per workload" question — deploy it onto
+# a node sized for it (ideally a dedicated, teardownable node so it's only
+# billed while in use).
+#
+# ── KVM vs TCG ──────────────────────────────────────────────────────────────
+# Hetzner Cloud exposes no /dev/kvm, so KVM=N forces TCG software emulation
+# (~5-10x slower; fine for batch/unattended, painful interactive). On a
+# KVM-capable node (Hetzner Dedicated / Vultr Bare Metal) drop `KVM: "N"` and
+# add `devices: [/dev/kvm]`.
+#
+# ── KNOWN CAVEAT (verify on first deploy) ───────────────────────────────────
+# uncloud appends a trailing newline to injected env values (see caddy recipe).
+# If dockur's KVM=N detection trips on "N\n", switch KVM off via an entrypoint
+# trim wrapper like caddy/compose.yaml does. Confirm on the first real deploy.
+#
+# ── ACCESS ──────────────────────────────────────────────────────────────────
+# RDP (3389) is the primary, authenticated entry. The noVNC web viewer (8006)
+# has NO auth — reach it over an SSH tunnel, don't route it publicly as-is.
+# Default Windows login is dockur's: user `Docker`, pass `admin` — change it
+# inside Windows on first login, and restrict :3389 to your IP in the firewall.
+services:
+  windows:
+    image: dockurr/windows:5.15
+    environment:
+      VERSION: "11"          # dockur downloads the ISO + runs unattended setup on first boot
+      RAM_SIZE: "12G"
+      CPU_CORES: "6"
+      DISK_SIZE: "64G"
+      KVM: "N"               # Hetzner Cloud has no nested virt; TCG fallback
+    cap_add:
+      - NET_ADMIN
+    volumes:
+      - windows_storage:/storage   # the Windows qcow2 disk — persists VM state across redeploys
+      - windows_shared:/data       # appears inside Windows as \\host.lan\Data — file bridge
+    x-ports:
+      # RDP — primary access (Windows-authenticated). Needs a :3389 rule on the
+      # node firewall (the cluster firewall only opens 22/80/443/51820 today).
+      - 3389:3389@host
+      - 3389:3389/udp@host
+      # Web viewer (noVNC, 8006) — NO auth; intentionally NOT published. Tunnel:
+      #   ssh -L 8006:localhost:8006 root@<node-ip>   →  http://localhost:8006
+      # To publish via Caddy, put basic auth in front first, then add:
+      #   - windows.${DOMAIN}:8006/https
+    restart: always
+
+volumes:
+  windows_storage:
+  windows_shared:
