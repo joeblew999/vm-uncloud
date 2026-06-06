@@ -19,6 +19,10 @@ fnox     = "1.25.1"
 "github:joeblew999/http-nu" = "0.16.0-relay-url.3"
 "github:joeblew999/xs"      = "0.12.0-relay-url.3"
 pitchfork                   = "latest"
+# yoke — one LLM agent turn as a unix pipe; powers `ai:ask`. Same ecosystem.
+"github:cablehead/yoke"     = "0.4.1"
+# aws-cli — ONLY for the win-kvm R2 snapshot transit (Vultr has no hot-snapshot).
+aws                         = "2.30.4"
 
 [env]
 # Cluster context name `uc` uses.
@@ -37,6 +41,11 @@ VULTR_REGION     = ""
 VULTR_PLAN       = ""
 VULTR_OS_ID      = "1743"   # Ubuntu 24.04 x64
 VULTR_SSH_KEY_ID = ""
+
+# R2 snapshot-transit (win-kvm state preservation). Set in mise.local.toml after
+# `mise run r2:bootstrap`; R2_ACCESS_KEY_ID/SECRET live in the keychain.
+R2_ENDPOINT = ""
+R2_BUCKET   = ""
 # SSH keys are NOT set here — they live once in tofu/terraform.tfvars
 # (ssh_key_name + ssh_private_key_file) and flow to the scripts via tofu output.
 
@@ -204,9 +213,22 @@ description = "noVNC viewer for the win-kvm node over an SSH tunnel."
 env = { WIN_PROVIDER = "vultr" }
 run = "fnox exec -- nu connect/viewer-open.nu"
 
+[tasks."win-kvm:snapshot"]
+description = "Snapshot the win-kvm Windows disk via R2 transit (UNVERIFIED port — needs R2 + Vultr + live run)."
+run = "fnox exec --if-missing ignore -- nu scripts/vultr-snapshot.nu"
+
 [tasks."win-kvm:down"]
-description = "Destroy the win-kvm Vultr node (no state preserved — see script note)."
+description = "Destroy the win-kvm Vultr node. Run win-kvm:snapshot FIRST to preserve state (not automatic)."
 run = "fnox exec -- nu scripts/vultr-down.nu"
+
+# ── r2 (Cloudflare R2 — snapshot transit bucket for win-kvm) ────────────────
+[tasks."r2:bootstrap"]
+description = "Guided one-time R2 bucket + token setup for the win-kvm snapshot pipeline."
+run = "nu r2/bootstrap.nu"
+
+[tasks."r2:check"]
+description = "Probe PUT/GET/DELETE against the configured R2 bucket (run after r2:bootstrap)."
+run = "fnox exec --if-missing ignore -- nu r2/check.nu"
 
 # ---------------------------------------------------------------------------
 # gui — browser status board (nodes, services, snapshots, costs, deploy ledger),
@@ -240,6 +262,20 @@ run = "pitchfork logs gui --follow"
 [tasks."jobs"]
 description = "Show what pitchfork is supervising (gui, xs)."
 run = "pitchfork list"
+
+# ---------------------------------------------------------------------------
+# ai / mcp — the AI-facing surface (sibling to the human-facing GUI). Both read
+# the same uncloud state via mcp/init.nu's wrappers.
+# ---------------------------------------------------------------------------
+[tasks."mcp:serve"]
+description = "Nushell MCP server (stdio) — Claude Desktop/Code drives uncloud via mcp/init.nu wrappers."
+run = "fnox exec --if-missing ignore -- nu --mcp --config mcp/init.nu"
+dir = "{{config_root}}"
+
+[tasks."ai:ask"]
+description = "One LLM turn over the control plane. Usage: mise run ai:ask -- 'are any nodes running?'. Needs ANTHROPIC_API_KEY in keychain."
+run = "fnox exec --if-missing ignore -- yoke --provider anthropic --model claude-sonnet-4-5 --tools nu --config mcp/init.nu"
+dir = "{{config_root}}"
 
 # ---------------------------------------------------------------------------
 # Secrets — one-time keychain population. Run these once per machine.

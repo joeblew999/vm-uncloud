@@ -130,6 +130,32 @@ def ledger-render [] {
 </tbody></table></figure>"
 }
 
+# Whitelisted actions: a web button can only fire these exact mise tasks (no
+# arbitrary task execution from the browser). Each runs fire-and-forget under
+# pitchfork so the HTTP response returns immediately and you can tail it.
+const ACTIONS = {
+  "recipe-moltis": ["recipe" "moltis"]
+  "win-up":        ["win:up"]
+  "win-deploy":    ["win:deploy"]
+  "win-down":      ["win:down"]
+}
+
+def fire-and-forget [task_args: list<string>] {
+  let safe = ($task_args | str join "-" | str replace --all ":" "-")
+  let name = $"action-($safe)"
+  ^pitchfork run $name -f -- mise run ...$task_args | complete | ignore
+  $name
+}
+
+def jobs-render [] {
+  let out = (^pitchfork list --hide-header | complete)
+  if $out.exit_code != 0 or ($out.stdout | str trim | is-empty) {
+    "<pre id=\"jobs\"><code>no pitchfork daemons running</code></pre>"
+  } else {
+    $"<pre id=\"jobs\"><code>(html-esc ($out.stdout | str trim))</code></pre>"
+  }
+}
+
 def render-board [] {
     let domain = (html-esc ($env.DOMAIN? | default ($env.UNCLOUD_CONTEXT? | default "vm-uncloud")))
     let poll = (if (reactive) { $"data-on:interval__duration.($POLL_MS)ms=\"@get\(`/api/nodes-fragment`\)\"" } else { "" })
@@ -158,6 +184,22 @@ def render-board [] {
 <section><h2>Cost model <small>— state/costs.jsonl</small></h2>
 (costs-render)
 </section>
+
+<section><h2>Actions <small>— fire-and-forget via pitchfork</small></h2>
+<p><small>Each runs the matching <code>mise run</code> task as a pitchfork daemon. win:up provisions a billable cpx42; win:down snapshots then destroys it.</small></p>
+<div role=\"group\">
+  <button data-on:click=\"@post\(`/api/action/recipe-moltis`\)\">Deploy Moltis</button>
+  <button data-on:click=\"@post\(`/api/action/win-up`\)\" class=\"secondary\">Windows: up</button>
+  <button data-on:click=\"@post\(`/api/action/win-deploy`\)\" class=\"secondary\">Windows: deploy</button>
+  <button data-on:click=\"@post\(`/api/action/win-down`\)\" class=\"contrast\">Windows: down</button>
+</div>
+<pre id=\"action-output\"><code>— click an action to run it —</code></pre>
+</section>
+
+<section><h2>Jobs <small>— pitchfork, polled ($POLL_MS / 1000)s</small></h2>
+<div data-on:load=\"@get\(`/api/jobs`\)\" data-on:interval__duration.($POLL_MS)ms=\"@get\(`/api/jobs`\)\">
+(jobs-render)
+</div></section>
 </main>"
     shell "vm-uncloud" $body
 }
@@ -168,6 +210,17 @@ def render-board [] {
     match [$method, $path] {
         ["GET", "/"]                    => { render-board }
         ["GET", "/api/nodes-fragment"]  => { datastar-patch (nodes-render) }
+        ["GET", "/api/jobs"]            => { datastar-patch (jobs-render) }
+        ["POST", $p] if ($p | str starts-with "/api/action/") => {
+            let key = ($p | str replace "/api/action/" "")
+            let task = ($ACTIONS | get -o $key)
+            if ($task | is-empty) {
+                datastar-patch $"<pre id=\"action-output\"><code>unknown action: (html-esc $key)</code></pre>"
+            } else {
+                let name = (fire-and-forget $task)
+                datastar-patch $"<pre id=\"action-output\"><code>queued <kbd>($task | str join ' ')</kbd> as pitchfork daemon <kbd>($name)</kbd><br>tail: pitchfork logs ($name)</code></pre>"
+            }
+        }
         _ => { $"not found: ($method) ($path)\n" }
     }
 }

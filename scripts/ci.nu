@@ -27,7 +27,7 @@ def main [] {
   }
   # connect/*.nu and gui/**/*.nu run top-level code (driven by `nu <x>.nu` /
   # http-nu), so parse them with nu-check rather than sourcing (which executes).
-  for f in ((glob connect/*.nu) ++ (glob gui/**/*.nu)) {
+  for f in ((glob connect/*.nu) ++ (glob gui/**/*.nu) ++ (glob mcp/*.nu) ++ (glob r2/*.nu)) {
     let r = (^nu -c $"nu-check ($f)" | complete)
     if (($r.stdout | str trim) != "true") { print $"   FAIL ($f):\n($r.stderr)"; $fails = ($fails | append $"parse ($f)") }
   }
