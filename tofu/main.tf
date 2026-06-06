@@ -61,6 +61,17 @@ resource "hcloud_firewall" "uncloud" {
     port       = tostring(var.wireguard_port)
     source_ips = ["0.0.0.0/0", "::/0"]
   }
+  # RDP for Windows desktop nodes only — restricted to the SSH allowlist (set
+  # ssh_allowed_ips to your IP). dockur exposes RDP on 3389 tcp+udp.
+  dynamic "rule" {
+    for_each = var.windows ? ["tcp", "udp"] : []
+    content {
+      direction  = "in"
+      protocol   = rule.value
+      port       = "3389"
+      source_ips = var.ssh_allowed_ips
+    }
+  }
 }
 
 resource "hcloud_server" "node" {
@@ -111,10 +122,23 @@ resource "hcloud_server" "node" {
 # challenge (no HTTP-01, no port-80/propagation timing, no per-host rate limits).
 # proxied = false so Caddy terminates TLS directly (DNS-only / grey cloud).
 resource "cloudflare_dns_record" "wildcard" {
-  count = var.domain == "" ? 0 : 1
+  count = (var.domain == "" || var.windows) ? 0 : 1
 
   zone_id = var.cloudflare_zone_id
   name    = "*.${var.domain}"
+  type    = "A"
+  content = hcloud_server.node[0].ipv4_address
+  ttl     = 60
+  proxied = false
+}
+
+# Windows desktop nodes get a single windows.<domain> A record instead of the
+# wildcard (which belongs to the cluster). RDP/viewer/GUI resolve the node here.
+resource "cloudflare_dns_record" "windows" {
+  count = (var.domain != "" && var.windows) ? 1 : 0
+
+  zone_id = var.cloudflare_zone_id
+  name    = "windows.${var.domain}"
   type    = "A"
   content = hcloud_server.node[0].ipv4_address
   ttl     = 60

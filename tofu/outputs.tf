@@ -15,7 +15,12 @@ output "ingress_ipv4" {
 
 output "wildcard" {
   description = "Wildcard hostname pointing at the ingress node (empty if no domain)"
-  value       = var.domain == "" ? "" : "*.${var.domain}"
+  value       = (var.domain == "" || var.windows) ? "" : "*.${var.domain}"
+}
+
+output "windows_host" {
+  description = "windows.<domain> for a Windows node (empty otherwise)"
+  value       = (var.domain != "" && var.windows) ? "windows.${var.domain}" : ""
 }
 
 output "domain" {

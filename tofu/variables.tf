@@ -77,3 +77,14 @@ variable "wireguard_port" {
   type        = number
   default     = 51820
 }
+
+# Node class. Default (false) = a normal cluster node (Caddy ingress + wildcard
+# cert). When true, this is a Windows desktop node (win-batch): opens RDP :3389
+# (restricted to ssh_allowed_ips), points windows.<domain> at it, and does NOT
+# claim the *.<domain> wildcard (that belongs to the cluster). Use with its own
+# context/workspace + win-batch.tfvars so its lifecycle is independent.
+variable "windows" {
+  description = "Provision this node for Windows desktop (RDP :3389; no wildcard role)"
+  type        = bool
+  default     = false
+}
