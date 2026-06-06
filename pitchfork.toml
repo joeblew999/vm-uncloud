@@ -1,0 +1,13 @@
+# pitchfork daemons for the vm-uncloud web control plane.
+#   xs  — event bus (future: live deploy events).
+#   gui — http-nu serving the status board on $HTTP_NU_ADDR.
+# Daily UX: `mise run gui:up` / `mise run gui:down` (= pitchfork start/stop).
+# Each delegates to a mise task so it picks up [env] + {{config_root}}.
+
+[daemons.xs]
+run = "mise run xs:serve"
+retry = 5
+
+[daemons.gui]
+run = "mise run gui:serve"
+retry = 5

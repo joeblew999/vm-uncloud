@@ -27,3 +27,6 @@ caddy/external.caddyfile
 
 # Generated per-app secret pointers (values live in the keychain).
 fnox.secrets.toml
+
+# xs event store (binary; regenerated at runtime by gui:up / xs:serve).
+state/xs.store/

@@ -77,6 +77,21 @@ mise run state:remote  # move tofu state to Cloudflare R2 (durable, lockable)
 
 `state/log.jsonl` is the up/deploy/down ledger (in git). `tofu` uses `HCLOUD_TOKEN` — verify infra with `fnox exec -- hcloud server list`, not bare `hcloud`.
 
+## Web GUI
+
+A browser status board (Hetzner nodes, uncloud services, snapshots, the cost
+model, and the deploy ledger) served by http-nu + Datastar, supervised by
+pitchfork. Read-only today; actions (deploy/win lifecycle) are the next layer.
+
+```bash
+mise run gui:up      # start the GUI + xs event bus → http://127.0.0.1:8080
+mise run gui:down    # stop them
+mise run gui:serve   # foreground (hot-reloads on serve.nu edits)
+```
+
+`gui/server/serve.nu` is the whole app (one http-nu closure). Same stack as the
+old vm-servers board, pointed at uncloud/hcloud data instead of a single VM.
+
 ## External services
 
 Front non-container hosts (BMC, HomeAssistant, NAS) through Caddy:

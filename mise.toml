@@ -13,11 +13,21 @@ opentofu = "1.12.1"
 hcloud   = "1.65.0"
 fnox     = "1.25.1"
 "github:nushell/nushell[exe=nu]" = "0.113.1"
+# Web GUI control plane (gui/server/serve.nu): http-nu serves it, xs is the
+# event bus, pitchfork supervises both as daemons. joeblew999 forks add iroh
+# relay support (FS sync across clones).
+"github:joeblew999/http-nu" = "0.16.0-relay-url.3"
+"github:joeblew999/xs"      = "0.12.0-relay-url.3"
+pitchfork                   = "latest"
 
 [env]
 # Cluster context name `uc` uses.
 UNCLOUD_CONTEXT = "hetzner"
 TF_IN_AUTOMATION = "1"
+# Web GUI control plane.
+HTTP_NU_ADDR = "127.0.0.1:8080"
+XS_ADDR      = "127.0.0.1:2619"
+XS_STORE     = "{{config_root}}/state/xs.store"
 # SSH keys are NOT set here — they live once in tofu/terraform.tfvars
 # (ssh_key_name + ssh_private_key_file) and flow to the scripts via tofu output.
 
@@ -149,6 +159,39 @@ run = "fnox exec -- nu connect/rdp-open.nu"
 [tasks."win:viewer"]
 description = "Open dockur's noVNC viewer (:8006) over an SSH tunnel — Windows install progress / desktop."
 run = "fnox exec -- nu connect/viewer-open.nu"
+
+# ---------------------------------------------------------------------------
+# gui — browser status board (nodes, services, snapshots, costs, deploy ledger),
+# served by http-nu + Datastar, supervised by pitchfork alongside the xs event
+# bus. Named gui:*/xs:* so they don't collide with the cluster's up/down.
+#   mise run gui:up   → http://127.0.0.1:8080   ;   mise run gui:down
+# ---------------------------------------------------------------------------
+[tasks."gui:up"]
+description = "Start the web GUI + xs event bus (pitchfork daemons). → http://127.0.0.1:8080"
+run = "pitchfork start xs gui"
+dir = "{{config_root}}"
+
+[tasks."gui:down"]
+description = "Stop the web GUI + xs daemons."
+run = "pitchfork stop xs gui"
+dir = "{{config_root}}"
+
+[tasks."gui:serve"]
+description = "Run the GUI in the foreground (interactive; --watch hot-reloads serve.nu). For background use gui:up."
+run = "fnox exec -- http-nu --datastar --watch $HTTP_NU_ADDR gui/server/serve.nu"
+
+[tasks."xs:serve"]
+description = "Run the xs event store in the foreground. For background use gui:up."
+run = "xs serve $XS_STORE --expose $XS_ADDR"
+dir = "{{config_root}}"
+
+[tasks."gui:logs"]
+description = "Tail the GUI daemon log (--follow)."
+run = "pitchfork logs gui --follow"
+
+[tasks."jobs"]
+description = "Show what pitchfork is supervising (gui, xs)."
+run = "pitchfork list"
 
 # ---------------------------------------------------------------------------
 # Secrets — one-time keychain population. Run these once per machine.
