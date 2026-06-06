@@ -9,8 +9,18 @@ use r2.nu *
 
 const TOFU = ["-chdir=tofu"]
 
-def main [] {
+# --context tears down a non-default node class (its own workspace + tfvars +
+# uncloud context). Omit for the default cluster. e.g.
+#   mise run down -- --context win-batch
+def main [--context: string = ""] {
   load-env (r2-creds)   # R2 state creds (no-op for local state)
+
+  let alt = ($context | is-not-empty)
+  let varfile = (if $alt { [$"-var-file=($context).tfvars"] } else { [] })
+  # Select the matching workspace so we destroy the right state, not the cluster.
+  let ws = (if $alt { $context } else { "default" })
+  do { ^tofu ...$TOFU workspace select $ws } | complete | ignore
+
   let forced = (($env.FORCE? | default "") != "") or (($env.UNCLOUD_AUTO_CONFIRM? | default "") != "")
   if not $forced {
     let expected = (^tofu ...$TOFU output -raw cluster_name | complete | get stdout | str trim)
@@ -20,10 +30,10 @@ def main [] {
   }
 
   print "==> tofu destroy"
-  ^tofu ...$TOFU destroy -auto-approve -input=false
+  ^tofu ...$TOFU destroy -auto-approve -input=false ...$varfile
 
   # Prune the local uncloud context that pointed at the destroyed machine.
-  let ctx = ($env.UNCLOUD_CONTEXT? | default "")
+  let ctx = (if $alt { $context } else { ($env.UNCLOUD_CONTEXT? | default "") })
   if ($ctx | is-not-empty) { do { nu state/log.nu down --cluster $ctx } | ignore }
   let cfg = ($nu.home-path | path join ".config" "uncloud" "config.yaml")
   if ($ctx | is-not-empty) and ($cfg | path exists) {

@@ -10,25 +10,43 @@ use r2.nu *
 
 const TOFU = ["-chdir=tofu"]
 
-def main [] {
+# --context selects a node class with ISOLATED state: a tofu workspace named
+# <context> + tofu/<context>.tfvars + an uncloud context of the same name. Omit
+# it for the default cluster (workspace "default", terraform.tfvars, context
+# from $UNCLOUD_CONTEXT). e.g. `mise run up -- --context win-batch`.
+def main [--context: string = ""] {
   # If remote (R2) state is active, derive its S3 creds from the CF token so
   # every tofu command below can read/write state. No-op for local state.
   load-env (r2-creds)
+
+  let alt = ($context | is-not-empty)
+  let varfile = (if $alt { [$"-var-file=($context).tfvars"] } else { [] })
 
   if not ("tofu/terraform.tfvars" | path exists) {
     print "ERROR: tofu/terraform.tfvars not found."
     print "       cp tofu/terraform.tfvars.example tofu/terraform.tfvars and edit it."
     exit 1
   }
+  if $alt and not ($"tofu/($context).tfvars" | path exists) {
+    print $"ERROR: tofu/($context).tfvars not found \(needed for --context ($context)\)."
+    print $"       cp tofu/($context).tfvars.example tofu/($context).tfvars and edit it."
+    exit 1
+  }
 
   print "==> tofu init"
   ^tofu ...$TOFU init -input=false
+
+  # Isolate state per context via a workspace (default cluster = "default").
+  let ws = (if $alt { $context } else { "default" })
+  let sel = (do { ^tofu ...$TOFU workspace select $ws } | complete)
+  if $sel.exit_code != 0 { ^tofu ...$TOFU workspace new $ws }
+  print $"==> tofu workspace: ($ws)"
 
   # tofu apply blocks until the box is fully READY: its remote-exec provisioner
   # waits for SSH (native connection retry) then `cloud-init status --wait`.
   # No sleep/poll here — when this returns, the machine is ready for init.
   print "==> tofu apply (server + DNS + waits for cloud-init via provisioner)"
-  ^tofu ...$TOFU apply -auto-approve -input=false
+  ^tofu ...$TOFU apply -auto-approve -input=false ...$varfile
 
   let out = (^tofu ...$TOFU output -json | from json)
   let ips = ($out.node_ipv4.value)
@@ -46,7 +64,7 @@ def main [] {
   # that env var (it defaults the new context to "default"), so we pass it
   # explicitly. Otherwise deploy/recipe/down would look for a context the init
   # step never created.
-  let ctx = ($env.UNCLOUD_CONTEXT? | default "hetzner")
+  let ctx = (if $alt { $context } else { ($env.UNCLOUD_CONTEXT? | default "hetzner") })
 
   # When we have a domain we deploy our own wildcard/DNS-01 Caddy below, so skip
   # the default Caddy at init time (--no-caddy). --no-dns: we manage DNS via
@@ -69,7 +87,9 @@ def main [] {
   # Deploy the wildcard/DNS-01 Caddy ingress. ONE *.<domain> cert via Cloudflare
   # DNS-01 covers every subdomain — no HTTP-01, no waiting, no rate-limit churn.
   # DOMAIN + CLOUDFLARE_API_TOKEN are injected here (token already in env via fnox).
-  if ($domain | is-not-empty) {
+  # Windows nodes have no wildcard (wildcard output is empty) — they serve RDP,
+  # not web, so no Caddy ingress.
+  if ($wildcard | is-not-empty) {
     print $"==> Deploying wildcard Caddy \(DNS-01 cert for ($wildcard)\)"
     with-env { DOMAIN: $domain } { ^uc deploy -f caddy/compose.yaml -y }
   }

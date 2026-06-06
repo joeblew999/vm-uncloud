@@ -102,6 +102,55 @@ shell = "nu --commands"
 run = "open state/costs.jsonl | lines | each {|l| $l | from json } | table -e"
 
 # ---------------------------------------------------------------------------
+# win — Windows desktop node (dockur/windows on a dedicated win-batch node, its
+# own tofu workspace + uncloud context). Cost discipline: snapshot then down.
+#   mise run win:up → win:deploy → win:rdp:wait → win:rdp → ... → win:down
+# Needs tofu/win-batch.tfvars (cp from win-batch.tfvars.example).
+# ---------------------------------------------------------------------------
+[tasks."win:up"]
+description = "Provision the dedicated cpx42 Windows node (win-batch context)."
+run = "fnox exec -- nu scripts/up.nu --context win-batch"
+
+[tasks."win:deploy"]
+description = "Deploy the windows recipe (dockur/windows) onto the win-batch node."
+run = "fnox exec -- nu scripts/recipe.nu windows --context win-batch"
+
+[tasks."win:ip"]
+description = "Public IPv4 of the Windows node."
+run = "nu connect/ip.nu"
+
+[tasks."win:status"]
+description = "Describe the Windows node (state, type, IP)."
+run = "fnox exec -- hcloud server describe win-batch-1"
+
+[tasks."win:snapshot"]
+description = "Snapshot the Windows node — preserve state before teardown."
+shell = "nu --commands"
+run = "fnox exec -- hcloud server create-image --type snapshot --description $\"win-batch-(date now | format date '%Y%m%d-%H%M%S')\" win-batch-1"
+
+[tasks."win:down"]
+description = "Snapshot THEN destroy the Windows node (stops billing; restore with win:up)."
+depends = ["win:snapshot"]
+run = "fnox exec -- nu scripts/down.nu --context win-batch"
+
+[tasks."win:rdp:install"]
+description = "Install/verify an RDP client for this OS (idempotent)."
+run = "nu connect/rdp-install.nu"
+
+[tasks."win:rdp:wait"]
+description = "Block until the Windows node accepts RDP on :3389 (desktop notification when ready)."
+run = "fnox exec -- nu connect/rdp-wait.nu"
+
+[tasks."win:rdp"]
+description = "Open RDP to the Windows node (user Docker / pass admin). Installs the client first."
+depends = ["win:rdp:install"]
+run = "fnox exec -- nu connect/rdp-open.nu"
+
+[tasks."win:viewer"]
+description = "Open dockur's noVNC viewer (:8006) over an SSH tunnel — Windows install progress / desktop."
+run = "fnox exec -- nu connect/viewer-open.nu"
+
+# ---------------------------------------------------------------------------
 # Secrets — one-time keychain population. Run these once per machine.
 #   mise run secrets:set   then paste each token.
 # ---------------------------------------------------------------------------

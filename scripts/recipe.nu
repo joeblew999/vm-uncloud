@@ -48,7 +48,9 @@ def list_recipes [] {
   }
 }
 
-def main [recipe?: string] {
+# --context deploys onto a non-default uncloud cluster (e.g. the win-batch node):
+#   mise run recipe windows -- --context win-batch
+def main [recipe?: string, --context: string = ""] {
   load-env (r2-creds)   # so `tofu output` can read remote state
   if ($recipe | is-not-empty) and not ($"recipes/($recipe)/compose.yaml" | path exists) {
     nu scripts/recipes-sync.nu
@@ -84,10 +86,12 @@ def main [recipe?: string] {
   let host = ($envs.HOST? | default $dom)
   if ($host | is-not-empty) { print $"==> publishing at https://($host)" }
 
-  print $"==> uc deploy -f ($compose) -y"
-  with-env $envs { ^uc deploy -f $compose -y }
+  # Target a specific uncloud cluster when --context is given (else the current).
+  let ctx_flag = (if ($context | is-not-empty) { [--context $context] } else { [] })
+  print $"==> uc deploy -f ($compose) ($ctx_flag | str join ' ') -y"
+  with-env $envs { ^uc deploy -f $compose ...$ctx_flag -y }
 
-  let cluster = ($env.UNCLOUD_CONTEXT? | default "")
+  let cluster = (if ($context | is-not-empty) { $context } else { ($env.UNCLOUD_CONTEXT? | default "") })
   do {
     let base = [deploy --cluster $cluster --service $recipe]
     let args = (if ($host | is-empty) { $base } else { $base | append [--host $host] })

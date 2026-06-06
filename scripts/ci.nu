@@ -25,6 +25,12 @@ def main [] {
     let r = (^nu -c $"source ($f)" | complete)
     if $r.exit_code != 0 { print $"   FAIL ($f):\n($r.stderr)"; $fails = ($fails | append $"parse ($f)") }
   }
+  # connect/*.nu run top-level code (driven by `nu connect/<x>.nu`), so parse
+  # them with nu-check rather than sourcing (which would execute them).
+  for f in (glob connect/*.nu) {
+    let r = (^nu -c $"nu-check ($f)" | complete)
+    if (($r.stdout | str trim) != "true") { print $"   FAIL ($f):\n($r.stderr)"; $fails = ($fails | append $"parse ($f)") }
+  }
 
   # Actually RUN each recipe prepare.nu (parse alone misses runtime errors like
   # literal parens in interpolated strings). Must exit 0 and print valid JSON.

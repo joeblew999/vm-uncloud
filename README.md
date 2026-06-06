@@ -103,20 +103,22 @@ This repo is the **single home for our Hetzner deployments** — one tool
 includes virtual desktops: **`dockur/windows` is just a container, so it runs as
 an uncloud recipe** — no bespoke parallel lifecycle.
 
+Windows is heavy + bursty, so it runs on its **own dedicated, teardownable node**
+(`win-batch` — a `cpx42` in its own tofu workspace + uncloud context), never on
+the always-on `cpx22` cluster. The whole cycle (`state/costs.jsonl` has pricing):
+
 ```bash
-mise run recipe windows    # deploy dockur/windows as an uncloud service
+cp tofu/win-batch.tfvars.example tofu/win-batch.tfvars   # one-time
+mise run win:up           # provision the cpx42 Windows node (RDP :3389 opened)
+mise run win:deploy       # deploy dockur/windows onto it
+mise run win:rdp:wait     # wait until Windows finishes install (notifies)
+mise run win:rdp          # RDP in (user Docker / pass admin) — or win:viewer (noVNC tunnel)
+mise run win:down         # snapshot THEN destroy → stops billing; win:up restores
 ```
 
-Two things stay distinct (don't conflate them):
-
-- **Capability** (done): `recipes/windows/` makes uncloud run the desktop. RDP on
-  `:3389` (authenticated), noVNC viewer on `:8006` (no auth — SSH-tunnel it). On
-  Hetzner Cloud `KVM=N` (TCG, ~5-10x slower; KVM-fast needs a `/dev/kvm` node).
-- **Placement** (open): *which node class runs which workload.* Windows is heavy
-  (~cpx42, 8/16) and bursty, so it shouldn't share the always-on `cpx22` Moltis
-  node — ideally a **dedicated, teardownable node** you `up` → `recipe windows` →
-  snapshot → `down`, so it's only billed while in use. Wiring that (a 2nd node /
-  context + a `:3389` firewall rule) is tracked separately.
+`KVM=N` on Hetzner Cloud (TCG, ~5-10× slower). **KVM-fast = bare metal** (Vultr
+BM / Hetzner Robot) — a future node class; Hetzner Cloud has no `/dev/kvm`. See
+[`docs/PLACEMENT.md`](docs/PLACEMENT.md) for the node-class-per-workload map.
 
 Supersedes the old standalone [vm-servers](https://github.com/joeblew999/vm-servers)
 repo (bespoke hcloud + cloud-init lifecycle). Sibling
