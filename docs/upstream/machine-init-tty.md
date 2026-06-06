@@ -34,6 +34,14 @@ A non-interactive path for the readiness wait — e.g. honor `-y`/`--no-tui`/
 `CI=1`/no-TTY by polling without bubbletea — so `uc machine init` completes in
 CI and automation.
 
+## TODO — empirical test owed to #386
+
+@miekg asked whether `uc machine init root@<ip> --no-dns -y | cat` avoids the
+error. Reasoned answer: no — the failure is opening `/dev/tty` (controlling
+terminal) for the spinner, not `isatty(stdout)`, so redirecting stdout shouldn't
+help; a PTY (`script -q /dev/null …`) should. **Confirm `| cat` vs `script` on
+the next provision and post the outputs to #386.**
+
 ## Workaround in this repo
 
 `scripts/up.nu` runs `init` with `-y`; when it dies on the spinner, finish with
