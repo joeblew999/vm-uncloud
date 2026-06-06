@@ -21,3 +21,6 @@ CLOUDFLARE_API_TOKEN  = { provider = "keychain", value = "CLOUDFLARE_API_TOKEN" 
 # Used to build the R2 endpoint and to derive R2 S3 creds from the CF token
 # (token id = access key, sha256(token) = secret). No separate R2 token needed.
 CLOUDFLARE_ACCOUNT_ID = { provider = "keychain", value = "CLOUDFLARE_ACCOUNT_ID" }
+# win-kvm only — read natively by `vultr-cli` for Vultr Bare Metal provisioning.
+# Optional: absent until you run win-kvm; scripts use `fnox exec --if-missing ignore`.
+VULTR_API_KEY         = { provider = "keychain", value = "VULTR_API_KEY" }

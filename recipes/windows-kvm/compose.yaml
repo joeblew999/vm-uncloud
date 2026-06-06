@@ -1,0 +1,36 @@
+# Windows desktop with KVM acceleration — for the win-kvm node class (bare
+# metal that exposes /dev/kvm: Vultr Bare Metal, Hetzner Robot, any KVM host).
+# Native-speed Windows, unlike the TCG `windows` recipe used on Hetzner Cloud.
+#
+#   mise run recipe windows-kvm -- --context win-kvm
+#
+# REQUIRES /dev/kvm on the node — fails on Hetzner Cloud (no nested virt; use
+# the `windows` recipe there instead). Provision a KVM node via `win-kvm:up`
+# (Vultr BM) or `uc machine init` any KVM Linux box into the win-kvm context.
+# Access (RDP :3389 / noVNC :8006), default creds (Docker/admin), and the
+# uncloud env-newline caveat are identical to the `windows` recipe — see it.
+services:
+  windows:
+    image: dockurr/windows:5.15
+    environment:
+      VERSION: "11"
+      RAM_SIZE: "12G"
+      CPU_CORES: "6"
+      DISK_SIZE: "64G"
+      # NOTE: no KVM=N here — we WANT hardware acceleration via /dev/kvm below.
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/kvm        # the whole point of win-kvm — native virt
+    volumes:
+      - windows_storage:/storage
+      - windows_shared:/data
+    x-ports:
+      - 3389:3389@host
+      - 3389:3389/udp@host
+      # noVNC :8006 — NO auth; reach via SSH tunnel (mise run win:viewer), not published.
+    restart: always
+
+volumes:
+  windows_storage:
+  windows_shared:

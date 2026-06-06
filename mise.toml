@@ -28,6 +28,15 @@ TF_IN_AUTOMATION = "1"
 HTTP_NU_ADDR = "127.0.0.1:8080"
 XS_ADDR      = "127.0.0.1:2619"
 XS_STORE     = "{{config_root}}/state/xs.store"
+
+# win-kvm (Vultr Bare Metal). VULTR_API_KEY lives in the keychain (fnox); the
+# rest are non-secret selections — override in mise.local.toml. Enumerate with
+# `vultr-cli regions list` / `plans list` (BM, >=6c) / `os list` / `ssh-key list`.
+VULTR_LABEL      = "win-kvm"
+VULTR_REGION     = ""
+VULTR_PLAN       = ""
+VULTR_OS_ID      = "1743"   # Ubuntu 24.04 x64
+VULTR_SSH_KEY_ID = ""
 # SSH keys are NOT set here — they live once in tofu/terraform.tfvars
 # (ssh_key_name + ssh_private_key_file) and flow to the scripts via tofu output.
 
@@ -159,6 +168,45 @@ run = "fnox exec -- nu connect/rdp-open.nu"
 [tasks."win:viewer"]
 description = "Open dockur's noVNC viewer (:8006) over an SSH tunnel — Windows install progress / desktop."
 run = "fnox exec -- nu connect/viewer-open.nu"
+
+# ---------------------------------------------------------------------------
+# win-kvm — KVM-fast Windows on bare metal (Vultr BM). Hetzner Cloud has no
+# /dev/kvm, so interactive Windows that's too slow on win-batch (TCG) goes here.
+# Needs VULTR_API_KEY (keychain) + VULTR_REGION/PLAN/OS_ID/SSH_KEY_ID (mise.local).
+#   win-kvm:up → win-kvm:ip → win-kvm:init → win-kvm:deploy → win:rdp → win-kvm:down
+# (rdp/viewer reuse the win: tasks with WIN_PROVIDER=vultr — see below.)
+# ---------------------------------------------------------------------------
+[tasks."win-kvm:up"]
+description = "Provision a Vultr Bare Metal KVM node (uncloud-bootstrapped)."
+run = "fnox exec -- nu scripts/vultr-up.nu"
+
+[tasks."win-kvm:ip"]
+description = "Public IPv4 of the win-kvm Vultr node (once booted)."
+env = { WIN_PROVIDER = "vultr" }
+run = "nu connect/ip.nu"
+
+[tasks."win-kvm:init"]
+description = "Join the booted Vultr BM to the win-kvm uncloud context (uc machine init)."
+run = "fnox exec -- nu scripts/vultr-init.nu"
+
+[tasks."win-kvm:deploy"]
+description = "Deploy the KVM windows recipe (dockur + /dev/kvm) onto the win-kvm node."
+run = "fnox exec -- nu scripts/recipe.nu windows-kvm --context win-kvm"
+
+[tasks."win-kvm:rdp"]
+description = "RDP into the win-kvm Vultr node (Docker/admin)."
+env = { WIN_PROVIDER = "vultr" }
+depends = ["win:rdp:install"]
+run = "fnox exec -- nu connect/rdp-open.nu"
+
+[tasks."win-kvm:viewer"]
+description = "noVNC viewer for the win-kvm node over an SSH tunnel."
+env = { WIN_PROVIDER = "vultr" }
+run = "fnox exec -- nu connect/viewer-open.nu"
+
+[tasks."win-kvm:down"]
+description = "Destroy the win-kvm Vultr node (no state preserved — see script note)."
+run = "fnox exec -- nu scripts/vultr-down.nu"
 
 # ---------------------------------------------------------------------------
 # gui — browser status board (nodes, services, snapshots, costs, deploy ledger),

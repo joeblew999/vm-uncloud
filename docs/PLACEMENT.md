@@ -10,7 +10,7 @@ and whether they need real virtualization (KVM). This is the map. Pricing is in
 |---|---|---|---|---|
 | **cluster** | Hetzner Cloud `cpx22` (2/4) | container | **always-on** | Moltis + light web containers. **LIVE** (`amplifycms.com`). |
 | **win-batch** | Hetzner Cloud `cpx42` (8/16) | dockur **TCG** (`KVM=N`) | **ephemeral**: up → `recipe windows` → snapshot → down | Windows batch / unattended (Revit RBP). ~10× slower than KVM, but cheap & hourly. **NEXT TO BUILD.** |
-| **win-kvm** | Vultr Bare Metal (hourly) or Hetzner Robot `ax*` | dockur **KVM** (`/dev/kvm`) | ephemeral (Vultr) / 30-day-min (Robot) | Interactive Windows where TCG is too slow. **FUTURE** — see caveat. |
+| **win-kvm** | Vultr Bare Metal (hourly) or Hetzner Robot `ax*` | dockur **KVM** (`/dev/kvm`) | ephemeral (Vultr) / 30-day-min (Robot) | Interactive Windows where TCG is too slow. **SCAFFOLDED** (`win-kvm:*`; needs a Vultr key + live run). |
 
 **Rule:** never co-locate Windows on the `cluster` node (it's a 2/4 box; Windows
 needs 8/16+). Each Windows node is **dedicated and teardownable** so it's billed
@@ -51,11 +51,27 @@ RDP / viewer / GUI resolve the target node's IP from its context (tofu output /
 
 ## Build order
 
-1. **win-batch provisioning** — a parameterized node flavor (size + context) so
-   `up`/`down` can stand a dedicated `cpx42` Windows node with a `:3389` rule,
-   independent of the cluster. Then `recipe windows` onto it.
-2. **Port the control plane** onto that node (as it works): RDP mise tasks
-   (`vm:rdp`, `vm:rdp:wait`, `vm:viewer`), the cost ledger (done), then the web
-   GUI (adapted to drive `up`/`down`/`recipe`/`status` instead of the old
-   bespoke lifecycle).
-3. **win-kvm** — Vultr Bare Metal path for on-demand KVM (later).
+1. **win-batch** — ✅ DONE. `windows` var + `--context` workspaces; `win:up` →
+   `win:deploy` → `win:rdp`/`win:viewer` → `win:snapshot` → `win:down`.
+2. **Control plane** — ✅ DONE. RDP/viewer tasks (`win:rdp*`, `win:viewer`),
+   cost ledger (`costs:show`), read-only web GUI (`gui:up`).
+3. **win-kvm** — ✅ SCAFFOLDED (needs `VULTR_API_KEY` + a first live run to
+   verify; Vultr BM is billable so untested here). Flow:
+
+   ```bash
+   # one-time: VULTR_API_KEY in keychain; VULTR_REGION/PLAN/OS_ID/SSH_KEY_ID in mise.local.toml
+   mise run win-kvm:up        # create a Vultr Bare Metal node (uncloud cloud-init)
+   mise run win-kvm:ip        # poll until it has an IP (~5-10 min)
+   mise run win-kvm:init      # uc machine init → win-kvm context
+   mise run win-kvm:deploy    # recipe windows-kvm (dockur + /dev/kvm)
+   mise run win-kvm:rdp       # RDP in (native speed)
+   mise run win-kvm:down      # destroy (no state preserved yet — see below)
+   ```
+
+   The `windows-kvm` recipe adds `/dev/kvm` (native virt). Any KVM Linux box
+   works — `uc machine init <ip> --context win-kvm` then `recipe windows-kvm`;
+   Vultr is just the automated provider. **Caveat:** Vultr BM has no native
+   hot-snapshot — vm-servers preserved state via an R2-transit pipeline that is
+   NOT yet ported, so `win-kvm:down` currently loses Windows state. For
+   state-preserving on-demand Windows today, use **win-batch** (Hetzner snapshot).
+   Porting the R2 snapshot path is the remaining win-kvm work.

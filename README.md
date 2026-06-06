@@ -131,9 +131,10 @@ mise run win:rdp          # RDP in (user Docker / pass admin) — or win:viewer 
 mise run win:down         # snapshot THEN destroy → stops billing; win:up restores
 ```
 
-`KVM=N` on Hetzner Cloud (TCG, ~5-10× slower). **KVM-fast = bare metal** (Vultr
-BM / Hetzner Robot) — a future node class; Hetzner Cloud has no `/dev/kvm`. See
-[`docs/PLACEMENT.md`](docs/PLACEMENT.md) for the node-class-per-workload map.
+`KVM=N` on Hetzner Cloud (TCG, ~5-10× slower). **KVM-fast = bare metal** via the
+`win-kvm:*` tasks (Vultr BM; Hetzner Cloud has no `/dev/kvm`) — scaffolded, needs
+a Vultr key + a first live run. See [`docs/PLACEMENT.md`](docs/PLACEMENT.md) for
+the node-class-per-workload map.
 
 Supersedes the old standalone [vm-servers](https://github.com/joeblew999/vm-servers)
 repo (bespoke hcloud + cloud-init lifecycle). Sibling
