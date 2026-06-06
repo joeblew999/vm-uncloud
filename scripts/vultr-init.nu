@@ -8,6 +8,8 @@ def main [] {
   let key = ($env.VULTR_SSH_KEY_FILE? | default "~/.ssh/id_ed25519" | path expand)
   ^ssh-keygen -R $ip out+err> /dev/null
   print $"==> uc machine init root@($ip) --context win-kvm --no-dns --no-caddy"
-  ^uc machine init $"root@($ip)" --context win-kvm --name win-kvm-1 --no-dns --no-caddy -i $key -y
+  # PTY-wrap so the readiness spinner survives a non-TTY shell (uncloud#386).
+  let cmd = ["uc" "machine" "init" $"root@($ip)" "--context" "win-kvm" "--name" "win-kvm-1" "--no-dns" "--no-caddy" "-i" $key "-y"]
+  if $nu.os-info.name == "macos" { ^script -q /dev/null ...$cmd } else { ^script -qec ($cmd | str join " ") /dev/null }
   print "win-kvm node joined. Next: mise run win-kvm:deploy"
 }

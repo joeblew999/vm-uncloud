@@ -34,16 +34,21 @@ A non-interactive path for the readiness wait — e.g. honor `-y`/`--no-tui`/
 `CI=1`/no-TTY by polling without bubbletea — so `uc machine init` completes in
 CI and automation.
 
-## TODO — empirical test owed to #386
+## Verified (2026-06-06, answered on #386)
 
-@miekg asked whether `uc machine init root@<ip> --no-dns -y | cat` avoids the
-error. Reasoned answer: no — the failure is opening `/dev/tty` (controlling
-terminal) for the spinner, not `isatty(stdout)`, so redirecting stdout shouldn't
-help; a PTY (`script -q /dev/null …`) should. **Confirm `| cat` vs `script` on
-the next provision and post the outputs to #386.**
+Tested on a throwaway node (uc 0.19.0, non-interactive shell, no controlling TTY):
 
-## Workaround in this repo
+- **`uc machine init root@<ip> --no-dns -y | cat`** → cluster initialises, then
+  `Error: wait for cluster to be ready: … could not open TTY: open /dev/tty:
+  device not configured` (exit 1). **`| cat` does NOT help** — it redirects
+  stdout, but the spinner opens `/dev/tty` directly.
+- **`script -q /dev/null uc machine init root@<ip> --no-dns -y`** (give it a PTY)
+  → `Cluster is ready.` (exit 0). **Works.**
 
-`scripts/up.nu` runs `init` with `-y`; when it dies on the spinner, finish with
-`uc machine ls` + the caddy/recipe deploys (all headless-safe). Documented in
-`CLAUDE.md` and `feedback_vm_uncloud_gotchas`.
+## Fix in this repo (auto)
+
+`scripts/up.nu` now wraps `uc machine init`/`add` in a PTY (`with-pty` →
+`script -q /dev/null …` on macOS/BSD, `script -qec "…" /dev/null` on Linux), and
+`scripts/vultr-init.nu` does the same for win-kvm. So `mise run up` completes
+headlessly — no manual finish needed. Drop the wrapper if/when uncloud ships a
+`--plain`/`--no-tui` path (#386).

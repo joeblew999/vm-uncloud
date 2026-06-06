@@ -10,6 +10,18 @@ use r2.nu *
 
 const TOFU = ["-chdir=tofu"]
 
+# `uc machine init/add`'s readiness spinner opens /dev/tty directly, so it dies
+# in a shell with no controlling terminal (CI, agents) even with -y. Verified
+# fix: give it a PTY. macOS/BSD: `script -q /dev/null <cmd…>`; Linux:
+# `script -qec "<cmd>" /dev/null`. Upstream: psviderski/uncloud#386.
+def with-pty [cmd: list<string>] {
+  if $nu.os-info.name == "macos" {
+    ^script -q /dev/null ...$cmd
+  } else {
+    ^script -qec ($cmd | str join " ") /dev/null
+  }
+}
+
 # --context selects a node class with ISOLATED state: a tofu workspace named
 # <context> + tofu/<context>.tfvars + an uncloud context of the same name. Omit
 # it for the default cluster (workspace "default", terraform.tfvars, context
@@ -69,18 +81,19 @@ def main [--context: string = ""] {
   # When we have a domain we deploy our own wildcard/DNS-01 Caddy below, so skip
   # the default Caddy at init time (--no-caddy). --no-dns: we manage DNS via
   # Cloudflare, not the uncld.dev rental.
-  let caddy_flag = (if ($domain | is-empty) { [] } else { [--no-caddy] })
+  let caddy_flag = (if ($domain | is-empty) { [] } else { ["--no-caddy"] })
 
   # First node initialises the cluster; the rest join the WireGuard mesh.
+  # Wrapped in with-pty so the readiness spinner doesn't need a real TTY.
   $ips | enumerate | each {|row|
     let ip = $row.item
     let mname = $"($ctx)-($row.index + 1)"
     if $row.index == 0 {
       print $"==> uc machine init root@($ip) --context ($ctx) --name ($mname) --no-dns"
-      ^uc machine init $"root@($ip)" --context $ctx --name $mname --no-dns ...$caddy_flag -i $key -y
+      with-pty (["uc" "machine" "init" $"root@($ip)" "--context" $ctx "--name" $mname "--no-dns"] ++ $caddy_flag ++ ["-i" $key "-y"])
     } else {
       print $"==> uc machine add root@($ip) --context ($ctx) --name ($mname)"
-      ^uc machine add $"root@($ip)" --context $ctx --name $mname -i $key -y
+      with-pty ["uc" "machine" "add" $"root@($ip)" "--context" $ctx "--name" $mname "-i" $key "-y"]
     }
   }
 
