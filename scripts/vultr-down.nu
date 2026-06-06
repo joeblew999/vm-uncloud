@@ -19,7 +19,7 @@ def main [] {
   do { nu state/log.nu down --cluster win-kvm } | ignore
 
   # Prune the local uncloud context, if present.
-  let cfg = ($nu.home-path | path join ".config" "uncloud" "config.yaml")
+  let cfg = ($nu.home-dir | path join ".config" "uncloud" "config.yaml")
   if ($cfg | path exists) {
     let data = (open $cfg)
     if ("win-kvm" in ($data.contexts? | default {} | columns)) {
