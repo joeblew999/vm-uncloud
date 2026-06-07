@@ -16,6 +16,7 @@ Not bugs; upstream features that would replace a workaround/limitation here.
 
 | Upstream | What it'd let us drop |
 |---|---|
+| [PR #385](https://github.com/psviderski/uncloud/pull/385) — compose `secrets` (`/run/secrets`) | inject the CF DNS-01 token + `MOLTIS_TOKEN` as secret **files** instead of `${VAR}` env → likely sidesteps the [#393](https://github.com/psviderski/uncloud/issues/393) trailing-`\n`, so we drop the `tr -d '\r\n'` trim in `caddy/compose.yaml` (caveat: confirm the secret *file* itself has no trailing `\n`). Commented. |
 | [disc #280](https://github.com/psviderski/uncloud/discussions/280) / [#108](https://github.com/psviderski/uncloud/issues/108) — L4 TCP/UDP passthrough | RDP `:3389` via the managed ingress instead of raw `@host` + a manual firewall rule (commented our use case) |
 | [#369](https://github.com/psviderski/uncloud/issues/369) — `uc undeploy` / "app" concept | per-recipe teardown without whole-node `tofu destroy` (commented our recipes-as-apps use case) |
 
