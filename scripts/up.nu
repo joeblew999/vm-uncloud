@@ -68,6 +68,10 @@ def main [--context: string = ""] {
   if ($domain | is-not-empty) { print $"==> Wildcard: ($wildcard) -> ($ips | get 0)" }
 
   let key = ($out.ssh_private_key_file.value | path expand)
+  # Load the key into the ssh-agent so `uc machine init` can key-auth as root.
+  # A fresh shell/agent may be empty → init silently hangs on a password prompt.
+  # Idempotent (re-adding an already-loaded key is a no-op).
+  do { ^ssh-add $key } | complete | ignore
   # Clear stale host keys (Hetzner recycles IPs) so client-side `uc machine init`
   # doesn't trip on a mismatched known_hosts entry. One-shot, not a poll.
   for ip in $ips { ^ssh-keygen -R $ip out+err> /dev/null }

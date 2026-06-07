@@ -12,7 +12,7 @@ const TOFU = ["-chdir=tofu"]
 # --context tears down a non-default node class (its own workspace + tfvars +
 # uncloud context). Omit for the default cluster. e.g.
 #   mise run down -- --context win-batch
-def main [--context: string = ""] {
+def main [--context: string = "", --yes] {   # --yes / FORCE=1 skips the prompt (headless)
   load-env (r2-creds)   # R2 state creds (no-op for local state)
 
   let alt = ($context | is-not-empty)
@@ -21,11 +21,12 @@ def main [--context: string = ""] {
   let ws = (if $alt { $context } else { "default" })
   do { ^tofu ...$TOFU workspace select $ws } | complete | ignore
 
-  let forced = (($env.FORCE? | default "") != "") or (($env.UNCLOUD_AUTO_CONFIRM? | default "") != "")
+  let forced = $yes or (($env.FORCE? | default "") != "") or (($env.UNCLOUD_AUTO_CONFIRM? | default "") != "")
   if not $forced {
     let expected = (^tofu ...$TOFU output -raw cluster_name | complete | get stdout | str trim)
     let expected = (if ($expected | is-empty) { "uncloud" } else { $expected })
-    let answer = (input $"Type the cluster name to confirm destroy \(($expected)\): ")
+    # input fails with a cryptic I/O error when there's no TTY — give a useful hint.
+    let answer = (try { input $"Type the cluster name to confirm destroy \(($expected)\): " } catch { print -e "✗ no TTY to confirm — rerun headless: mise run down -- --yes"; exit 1 })
     if $answer != $expected { print "Aborted."; exit 1 }
   }
 
