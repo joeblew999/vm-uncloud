@@ -16,7 +16,7 @@ experimental = true
 # Shared mise task lib. cliff:* = changelog/release intel — track uncloud's
 # unreleased delta with `mise run cliff:repo -- psviderski/uncloud`.
 includes = [
-  "git::https://github.com/joeblew999/.github.git//tasks/cliff.toml?ref=v0.21.0",
+  "git::https://github.com/joeblew999/.github.git//tasks/cliff.toml?ref=v0.22.0",
 ]
 
 [tools]
