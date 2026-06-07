@@ -8,28 +8,21 @@
 #
 # Secrets come from fnox (keychain) -> mise tasks. Never hand-edit a .env / .tfvars file.
 
-[settings]
-# cliff:_base (shared lib) uses `extends` for tool dedup — mise experimental.
-experimental = true
-
 [task_config]
 # Shared mise task lib. cliff:* = changelog/release intel — track uncloud's
 # unreleased delta with `mise run cliff:repo -- psviderski/uncloud`.
 includes = [
-  "git::https://github.com/joeblew999/.github.git//tasks/cliff.toml?ref=v0.22.0",
+  "git::https://github.com/joeblew999/.github.git//tasks/cliff.toml?ref=v0.23.0",
 ]
 
 [tools]
 opentofu = "1.12.1"
 hcloud   = "1.65.0"
-fnox     = "1.25.1"
-"github:nushell/nushell[exe=nu]" = "0.113.1"
 # Web GUI control plane (gui/server/serve.nu): http-nu serves it, xs is the
 # event bus, pitchfork supervises both as daemons. joeblew999 forks add iroh
 # relay support (FS sync across clones).
 "github:joeblew999/http-nu" = "0.16.0-relay-url.3"
 "github:joeblew999/xs"      = "0.12.0-relay-url.3"
-pitchfork                   = "latest"
 # yoke — one LLM agent turn as a unix pipe; powers `ai:ask`. Same ecosystem.
 "github:cablehead/yoke"     = "0.4.1"
 # aws-cli — ONLY for the win-kvm R2 snapshot transit (Vultr has no hot-snapshot).
