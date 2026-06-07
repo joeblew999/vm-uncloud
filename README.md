@@ -77,6 +77,12 @@ mise run state:remote  # move tofu state to Cloudflare R2 (durable, lockable)
 
 `state/log.jsonl` is the up/deploy/down ledger (in git). `tofu` uses `HCLOUD_TOKEN` — verify infra with `fnox exec -- hcloud server list`, not bare `hcloud`.
 
+> **Teardown granularity:** `mise run down` is whole-node (tofu destroy) — right
+> for the ephemeral win nodes, but there's no clean "remove just one recipe, keep
+> the node + its other services" yet. Tracked upstream: uncloud
+> [#369](https://github.com/psviderski/uncloud/issues/369) (`uc undeploy` / an
+> "app" = compose-file concept). Until then, per-recipe removal is `uc rm <service>`.
+
 ## Web GUI
 
 A browser status board (Hetzner nodes, uncloud services, snapshots, the cost
