@@ -68,11 +68,11 @@ run = "nu scripts/setup.nu"
 # ---------------------------------------------------------------------------
 [tasks.up]
 description = "Provision Hetzner VPS + Cloudflare DNS, then init the Uncloud cluster"
-run = "fnox exec -- nu scripts/up.nu"
+run = "fnox exec --if-missing ignore -- nu scripts/up.nu"
 
 [tasks.deploy]
 description = "Deploy services from compose.yaml to the cluster"
-run = "fnox exec -- nu scripts/deploy.nu"
+run = "fnox exec --if-missing ignore -- nu scripts/deploy.nu"
 
 [tasks.push]
 description = "Ship local Docker images to the cluster (uc build --push, or: mise run push <image>)"
@@ -80,11 +80,11 @@ run = "nu scripts/push.nu"
 
 [tasks.down]
 description = "Destroy the server and remove its Cloudflare DNS records"
-run = "fnox exec -- nu scripts/down.nu"
+run = "fnox exec --if-missing ignore -- nu scripts/down.nu"
 
 [tasks.status]
 description = "Show machines, services, and the resolved cluster domain"
-run = "fnox exec -- nu scripts/status.nu"
+run = "fnox exec --if-missing ignore -- nu scripts/status.nu"
 
 [tasks.ci]
 description = "Repo checks: tofu fmt + validate + nushell parse (also run by CI)"
@@ -92,14 +92,14 @@ run = "nu scripts/ci.nu"
 
 [tasks."caddy:external"]
 description = "Front non-container services (bare metal/BMC/home hub) via managed Caddy"
-run = "fnox exec -- nu scripts/caddy-external.nu"
+run = "fnox exec --if-missing ignore -- nu scripts/caddy-external.nu"
 
 # Deploy a ready-made recipe from psviderski/uncloud-recipes, e.g.
 #   mise run recipe wordpress-mariadb
 # Clones the recipes into .src/ (gitignored) on first use. See examples/.
 [tasks.recipe]
 description = "Deploy a named recipe from uncloud-recipes (e.g. wordpress-mariadb)"
-run = "fnox exec -- nu scripts/recipe.nu"
+run = "fnox exec --if-missing ignore -- nu scripts/recipe.nu"
 
 # ---------------------------------------------------------------------------
 # Hidden tasks — used by tooling/verification, not part of the day-to-day flow.
@@ -108,7 +108,7 @@ run = "fnox exec -- nu scripts/recipe.nu"
 [tasks."tofu:plan"]
 description = "Preview infrastructure changes without applying"
 hide = true
-run = "fnox exec -- tofu -chdir=tofu plan"
+run = "fnox exec --if-missing ignore -- tofu -chdir=tofu plan"
 
 [tasks."recipes:sync"]
 description = "Shallow-clone/update uncloud-recipes into .src/"
@@ -117,12 +117,12 @@ run = "nu scripts/recipes-sync.nu"
 
 [tasks."state:remote"]
 description = "Move tofu state into Cloudflare R2 (durable + lockable; one-time)"
-run = "fnox exec -- nu scripts/state-remote.nu"
+run = "fnox exec --if-missing ignore -- nu scripts/state-remote.nu"
 
 [tasks.smoke]
 description = "CI check: tofu apply+destroy a throwaway box (infra only, no DNS, no uncloud)"
 hide = true
-run = "fnox exec -- nu scripts/smoke.nu"
+run = "fnox exec --if-missing ignore -- nu scripts/smoke.nu"
 
 # ---------------------------------------------------------------------------
 # Costs — queryable Hetzner/Vultr/R2 price model (state/costs.jsonl). Use it
@@ -141,11 +141,11 @@ run = "open state/costs.jsonl | lines | each {|l| $l | from json } | table -e"
 # ---------------------------------------------------------------------------
 [tasks."win:up"]
 description = "Provision the dedicated cpx42 Windows node (win-batch context)."
-run = "fnox exec -- nu scripts/up.nu --context win-batch"
+run = "fnox exec --if-missing ignore -- nu scripts/up.nu --context win-batch"
 
 [tasks."win:deploy"]
 description = "Deploy the windows recipe (dockur/windows) onto the win-batch node."
-run = "fnox exec -- nu scripts/recipe.nu windows --context win-batch"
+run = "fnox exec --if-missing ignore -- nu scripts/recipe.nu windows --context win-batch"
 
 [tasks."win:ip"]
 description = "Public IPv4 of the Windows node."
@@ -153,17 +153,17 @@ run = "nu connect/ip.nu"
 
 [tasks."win:status"]
 description = "Describe the Windows node (state, type, IP)."
-run = "fnox exec -- hcloud server describe win-batch-1"
+run = "fnox exec --if-missing ignore -- hcloud server describe win-batch-1"
 
 [tasks."win:snapshot"]
 description = "Snapshot the Windows node — preserve state before teardown."
 shell = "nu --commands"
-run = "fnox exec -- hcloud server create-image --type snapshot --description $\"win-batch-(date now | format date '%Y%m%d-%H%M%S')\" win-batch-1"
+run = "fnox exec --if-missing ignore -- hcloud server create-image --type snapshot --description $\"win-batch-(date now | format date '%Y%m%d-%H%M%S')\" win-batch-1"
 
 [tasks."win:down"]
 description = "Snapshot THEN destroy the Windows node (stops billing; restore with win:up)."
 depends = ["win:snapshot"]
-run = "fnox exec -- nu scripts/down.nu --context win-batch"
+run = "fnox exec --if-missing ignore -- nu scripts/down.nu --context win-batch"
 
 [tasks."win:rdp:install"]
 description = "Install/verify an RDP client for this OS (idempotent)."
@@ -171,16 +171,16 @@ run = "nu connect/rdp-install.nu"
 
 [tasks."win:rdp:wait"]
 description = "Block until the Windows node accepts RDP on :3389 (desktop notification when ready)."
-run = "fnox exec -- nu connect/rdp-wait.nu"
+run = "fnox exec --if-missing ignore -- nu connect/rdp-wait.nu"
 
 [tasks."win:rdp"]
 description = "Open RDP to the Windows node (user Docker / pass admin). Installs the client first."
 depends = ["win:rdp:install"]
-run = "fnox exec -- nu connect/rdp-open.nu"
+run = "fnox exec --if-missing ignore -- nu connect/rdp-open.nu"
 
 [tasks."win:viewer"]
 description = "Open dockur's noVNC viewer (:8006) over an SSH tunnel — Windows install progress / desktop."
-run = "fnox exec -- nu connect/viewer-open.nu"
+run = "fnox exec --if-missing ignore -- nu connect/viewer-open.nu"
 
 # ---------------------------------------------------------------------------
 # win-kvm — KVM-fast Windows on bare metal (Vultr BM). Hetzner Cloud has no
@@ -191,7 +191,7 @@ run = "fnox exec -- nu connect/viewer-open.nu"
 # ---------------------------------------------------------------------------
 [tasks."win-kvm:up"]
 description = "Provision a Vultr Bare Metal KVM node (uncloud-bootstrapped)."
-run = "fnox exec -- nu scripts/vultr-up.nu"
+run = "fnox exec --if-missing ignore -- nu scripts/vultr-up.nu"
 
 [tasks."win-kvm:ip"]
 description = "Public IPv4 of the win-kvm Vultr node (once booted)."
@@ -200,22 +200,22 @@ run = "nu connect/ip.nu"
 
 [tasks."win-kvm:init"]
 description = "Join the booted Vultr BM to the win-kvm uncloud context (uc machine init)."
-run = "fnox exec -- nu scripts/vultr-init.nu"
+run = "fnox exec --if-missing ignore -- nu scripts/vultr-init.nu"
 
 [tasks."win-kvm:deploy"]
 description = "Deploy the KVM windows recipe (dockur + /dev/kvm) onto the win-kvm node."
-run = "fnox exec -- nu scripts/recipe.nu windows-kvm --context win-kvm"
+run = "fnox exec --if-missing ignore -- nu scripts/recipe.nu windows-kvm --context win-kvm"
 
 [tasks."win-kvm:rdp"]
 description = "RDP into the win-kvm Vultr node (Docker/admin)."
 env = { WIN_PROVIDER = "vultr" }
 depends = ["win:rdp:install"]
-run = "fnox exec -- nu connect/rdp-open.nu"
+run = "fnox exec --if-missing ignore -- nu connect/rdp-open.nu"
 
 [tasks."win-kvm:viewer"]
 description = "noVNC viewer for the win-kvm node over an SSH tunnel."
 env = { WIN_PROVIDER = "vultr" }
-run = "fnox exec -- nu connect/viewer-open.nu"
+run = "fnox exec --if-missing ignore -- nu connect/viewer-open.nu"
 
 [tasks."win-kvm:snapshot"]
 description = "Snapshot the win-kvm Windows disk via R2 transit (UNVERIFIED port — needs R2 + Vultr + live run)."
@@ -223,7 +223,7 @@ run = "fnox exec --if-missing ignore -- nu scripts/vultr-snapshot.nu"
 
 [tasks."win-kvm:down"]
 description = "Destroy the win-kvm Vultr node. Run win-kvm:snapshot FIRST to preserve state (not automatic)."
-run = "fnox exec -- nu scripts/vultr-down.nu"
+run = "fnox exec --if-missing ignore -- nu scripts/vultr-down.nu"
 
 # ── r2 (Cloudflare R2 — snapshot transit bucket for win-kvm) ────────────────
 [tasks."r2:bootstrap"]
@@ -252,7 +252,7 @@ dir = "{{config_root}}"
 
 [tasks."gui:serve"]
 description = "Run the GUI in the foreground (interactive; --watch hot-reloads serve.nu). For background use gui:up."
-run = "fnox exec -- http-nu --datastar --watch $HTTP_NU_ADDR gui/server/serve.nu"
+run = "fnox exec --if-missing ignore -- http-nu --datastar --watch $HTTP_NU_ADDR gui/server/serve.nu"
 
 [tasks."xs:serve"]
 description = "Run the xs event store in the foreground. For background use gui:up."
@@ -296,24 +296,24 @@ fnox get CLOUDFLARE_API_TOKEN >/dev/null 2>&1 && echo "CLOUDFLARE_API_TOKEN: alr
 # ── ARM (cax) capacity: check availability + secure boxes before they sell out ─
 [tasks."arm:check"]
 description = "Show Hetzner ARM (cax) availability across ALL locations (EU often sold out; US/Singapore may have stock)."
-run = "fnox exec -- nu scripts/arm.nu check"
+run = "fnox exec --if-missing ignore -- nu scripts/arm.nu check"
 
 [tasks."arm:grab"]
 description = "Secure ONE cax box in a location (creates + keeps it → billing). Usage: mise run arm:grab -- <location> [size]"
-run = "fnox exec -- nu scripts/arm.nu grab"
+run = "fnox exec --if-missing ignore -- nu scripts/arm.nu grab"
 
 [tasks."arm:secure"]
 description = "Secure one cax box in EVERY location that has stock right now (billing!). Usage: mise run arm:secure -- [size]"
-run = "fnox exec -- nu scripts/arm.nu secure"
+run = "fnox exec --if-missing ignore -- nu scripts/arm.nu secure"
 
 [tasks."arm:watch"]
 description = "Watch + auto-grab cax in any location the moment it has stock (leave running). Usage: mise run arm:watch -- [size]"
-run = "fnox exec -- nu scripts/arm.nu watch"
+run = "fnox exec --if-missing ignore -- nu scripts/arm.nu watch"
 
 [tasks."arm:release"]
 description = "Delete a secured cax box. Usage: mise run arm:release -- <location>"
-run = "fnox exec -- nu scripts/arm.nu release"
+run = "fnox exec --if-missing ignore -- nu scripts/arm.nu release"
 
 [tasks."arm:release-all"]
 description = "Delete ALL secured cax boxes (arm-reserve-*)."
-run = "fnox exec -- nu scripts/arm.nu release-all"
+run = "fnox exec --if-missing ignore -- nu scripts/arm.nu release-all"
