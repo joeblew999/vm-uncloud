@@ -8,6 +8,17 @@
 #
 # Secrets come from fnox (keychain) -> mise tasks. Never hand-edit a .env / .tfvars file.
 
+[settings]
+# cliff:_base (shared lib) uses `extends` for tool dedup — mise experimental.
+experimental = true
+
+[task_config]
+# Shared mise task lib. cliff:* = changelog/release intel — track uncloud's
+# unreleased delta with `mise run cliff:repo -- psviderski/uncloud`.
+includes = [
+  "git::https://github.com/joeblew999/.github.git//tasks/cliff.toml?ref=v0.21.0",
+]
+
 [tools]
 opentofu = "1.12.1"
 hcloud   = "1.65.0"
