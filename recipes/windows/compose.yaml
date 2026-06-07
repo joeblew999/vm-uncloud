@@ -45,6 +45,9 @@ services:
     x-ports:
       # RDP — primary access (Windows-authenticated). Needs a :3389 rule on the
       # node firewall (the cluster firewall only opens 22/80/443/51820 today).
+      # FUTURE: when uncloud ships L4 TCP passthrough (discussion #280 / issue
+      # #108) this can route through the managed ingress as plain TCP (RDP needs
+      # no SNI) instead of `@host` + a separate firewall hole.
       - 3389:3389@host
       - 3389:3389/udp@host
       # Web viewer (noVNC, 8006) — NO auth; intentionally NOT published. Tunnel:

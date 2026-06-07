@@ -34,10 +34,11 @@ everything is an uncloud recipe or a thin mise task over uncloud/tofu/hcloud).
 1. **uncloud appends `\n` to every injected env value.** Harmless except for
    exact-match values — it broke the CF token for Caddy DNS-01. Trim CR/LF in the
    consuming container (`caddy/compose.yaml` wraps the command with `tr -d`).
-2. **`uc machine init` needs a real TTY** (a bubbletea spinner). `mise run up`
-   dies there headless, BUT tofu already made the box + the cluster context is
-   registered — finish manually: `uc machine ls`, deploy caddy, `recipe`. All
-   other `uc`/`hcloud`/`tofu` steps are headless-safe.
+2. **`uc machine init`'s readiness spinner needs a TTY** (bubbletea opens
+   `/dev/tty`). `up.nu`/`vultr-init.nu` auto-wrap init/add in a PTY
+   (`script -q /dev/null`, OS-dispatched), so `mise run up` works headless.
+   (Verified on uncloud#386: `| cat` does NOT help, a PTY does.) Drop the wrapper
+   if uncloud ships a `--plain`/`--no-tui` path.
 3. **Moltis** needs `MOLTIS_NO_TLS=true` with `MOLTIS_BEHIND_PROXY=true`.
 4. `fnox set` ALWAYS with `-p keychain` (else plaintext into `fnox.toml`).
    `tofu` reads `HCLOUD_TOKEN`/`CLOUDFLARE_API_TOKEN` from env via `fnox exec` —

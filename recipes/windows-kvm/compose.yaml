@@ -26,6 +26,8 @@ services:
       - windows_storage:/storage
       - windows_shared:/data
     x-ports:
+      # See `recipes/windows` re L4 TCP passthrough (uncloud disc #280) as the
+      # future-native replacement for `@host` + a manual firewall rule.
       - 3389:3389@host
       - 3389:3389/udp@host
       # noVNC :8006 — NO auth; reach via SSH tunnel (mise run win:viewer), not published.

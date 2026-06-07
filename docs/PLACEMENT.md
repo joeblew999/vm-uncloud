@@ -49,6 +49,12 @@ RDP / viewer / GUI resolve the target node's IP from its context (tofu output /
 `:3389` (RDP, restrict to your IP) — the cluster firewall opens only
 22/80/443/51820, so the win node gets its own rule.
 
+> **Future:** RDP is plain TCP, so it's exposed via a raw `:3389@host` port + a
+> dedicated firewall rule today. When uncloud ships **L4 TCP passthrough**
+> ([discussion #280](https://github.com/psviderski/uncloud/discussions/280) /
+> [issue #108](https://github.com/psviderski/uncloud/issues/108)), the windows
+> recipe can route 3389 through the managed ingress instead — one place for ports.
+
 ## Build order
 
 1. **win-batch** — ✅ DONE. `windows` var + `--context` workspaces; `win:up` →
