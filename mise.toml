@@ -292,3 +292,28 @@ echo "These are shared keychain items (service: fnox). If 'fnox get' shows a val
 fnox get HCLOUD_TOKEN >/dev/null 2>&1         && echo "HCLOUD_TOKEN: already set"         || fnox set -p keychain HCLOUD_TOKEN
 fnox get CLOUDFLARE_API_TOKEN >/dev/null 2>&1 && echo "CLOUDFLARE_API_TOKEN: already set" || fnox set -p keychain CLOUDFLARE_API_TOKEN
 """
+
+# ── ARM (cax) capacity: check availability + secure boxes before they sell out ─
+[tasks."arm:check"]
+description = "Show Hetzner ARM (cax) availability across ALL locations (EU often sold out; US/Singapore may have stock)."
+run = "fnox exec -- nu scripts/arm.nu check"
+
+[tasks."arm:grab"]
+description = "Secure ONE cax box in a location (creates + keeps it → billing). Usage: mise run arm:grab -- <location> [size]"
+run = "fnox exec -- nu scripts/arm.nu grab"
+
+[tasks."arm:secure"]
+description = "Secure one cax box in EVERY location that has stock right now (billing!). Usage: mise run arm:secure -- [size]"
+run = "fnox exec -- nu scripts/arm.nu secure"
+
+[tasks."arm:watch"]
+description = "Watch + auto-grab cax in any location the moment it has stock (leave running). Usage: mise run arm:watch -- [size]"
+run = "fnox exec -- nu scripts/arm.nu watch"
+
+[tasks."arm:release"]
+description = "Delete a secured cax box. Usage: mise run arm:release -- <location>"
+run = "fnox exec -- nu scripts/arm.nu release"
+
+[tasks."arm:release-all"]
+description = "Delete ALL secured cax boxes (arm-reserve-*)."
+run = "fnox exec -- nu scripts/arm.nu release-all"
