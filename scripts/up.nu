@@ -10,17 +10,9 @@ use r2.nu *
 
 const TOFU = ["-chdir=tofu"]
 
-# `uc machine init/add`'s readiness spinner opens /dev/tty directly, so it dies
-# in a shell with no controlling terminal (CI, agents) even with -y. Verified
-# fix: give it a PTY. macOS/BSD: `script -q /dev/null <cmd…>`; Linux:
-# `script -qec "<cmd>" /dev/null`. Upstream: psviderski/uncloud#386.
-def with-pty [cmd: list<string>] {
-  if $nu.os-info.name == "macos" {
-    ^script -q /dev/null ...$cmd
-  } else {
-    ^script -qec ($cmd | str join " ") /dev/null
-  }
-}
+# (Removed the with-pty wrapper: our uncloud fork's `uc machine init/add` now
+# falls back to plain output when stdout isn't a TTY, so no PTY is needed and
+# errors aren't swallowed. The fix is in joeblew999/uncloud add.go/init.go.)
 
 # --context selects a node class with ISOLATED state: a tofu workspace named
 # <context> + tofu/<context>.tfvars + an uncloud context of the same name. Omit
@@ -88,16 +80,17 @@ def main [--context: string = ""] {
   let caddy_flag = (if ($domain | is-empty) { [] } else { ["--no-caddy"] })
 
   # First node initialises the cluster; the rest join the WireGuard mesh.
-  # Wrapped in with-pty so the readiness spinner doesn't need a real TTY.
+  # Our uncloud fork falls back to plain output when stdout isn't a TTY, so no PTY
+  # wrapper is needed and errors surface normally (vs the old `script` swallow).
   $ips | enumerate | each {|row|
     let ip = $row.item
     let mname = $"($ctx)-($row.index + 1)"
     if $row.index == 0 {
       print $"==> uc machine init root@($ip) --context ($ctx) --name ($mname) --no-dns"
-      with-pty (["uc" "machine" "init" $"root@($ip)" "--context" $ctx "--name" $mname "--no-dns"] ++ $caddy_flag ++ ["-i" $key "-y"])
+      ^uc machine init $"root@($ip)" --context $ctx --name $mname --no-dns ...$caddy_flag -i $key -y
     } else {
       print $"==> uc machine add root@($ip) --context ($ctx) --name ($mname)"
-      with-pty ["uc" "machine" "add" $"root@($ip)" "--context" $ctx "--name" $mname "-i" $key "-y"]
+      ^uc machine add $"root@($ip)" --context $ctx --name $mname -i $key -y
     }
   }
 
