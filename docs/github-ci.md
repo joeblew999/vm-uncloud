@@ -33,6 +33,13 @@ onboarding a repo = pointing its `os-matrix` at our runner labels.
 Reuses existing machinery: the `win-kvm` recipe, `scripts/vultr-snapshot.nu`
 (R2-transit snapshots), `r2/`, and `scripts/state-remote.nu`.
 
+**Desktop engines (dockur org):**
+- **`dockurr/windows`** (52k★) — Windows in a KVM container. Already used by the `windows` recipe.
+- **`dockurr/macos`** (20k★) — macOS the same way (`build-mac`). EULA caveat above.
+- **`dockurr/qemu`** — the generic KVM/QEMU base under both; boot *any* OS image. The natural engine for **booting a prepared qcow2 from R2** (snapshot-resume), or an isolated Linux VM if we ever want one.
+- **`dockurr/windows-arm`** (2.2k★) — Windows-on-ARM, if we run ARM hosts (`cax*` / Apple Silicon).
+- **Linux needs none of these** — the host is already Linux, so `build-linux` runs natively on the box (no container-VM wrapper).
+
 ## How a runner works
 
 1. Desktop boots from an **R2 snapshot** pre-baked with: the GitHub Actions
