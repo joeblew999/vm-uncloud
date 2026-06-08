@@ -21,8 +21,14 @@ onboarding a repo = pointing its `os-matrix` at our runner labels.
 | Class | Provider / SKU | OS | Virt | Lifecycle | Status |
 |---|---|---|---|---|---|
 | **build-linux** | Vultr BM (hourly) or Hetzner Cloud `cpx*` | Linux | native | snapshot-resume | proposed |
-| **build-win** | Vultr Bare Metal (KVM) | Windows | dockur **KVM** | snapshot-resume | builds on `win-kvm` |
-| **build-mac** | ⚠️ no Vultr Mac — needs Apple HW (Mac mini / MacStadium) | macOS | native | TBD | **open question** |
+| **build-win** | Vultr Bare Metal (KVM) | Windows | `dockurr/windows` **KVM** | snapshot-resume | builds on `win-kvm` |
+| **build-mac** | Vultr Bare Metal (KVM) | macOS | `dockurr/macos` **KVM** | snapshot-resume | proposed — same pattern as windows |
+
+> macOS via **`dockurr/macos`** — the same dockur/KVM container trick as
+> `dockurr/windows` (the `windows` recipe), so **no Apple hardware needed**, just
+> a KVM host (Vultr BM). ⚠️ Caveat: running macOS on non-Apple hardware is against
+> Apple's licensing/EULA — fine for personal/experimental use; flag it before
+> relying on it in shared/public CI.
 
 Reuses existing machinery: the `win-kvm` recipe, `scripts/vultr-snapshot.nu`
 (R2-transit snapshots), `r2/`, and `scripts/state-remote.nu`.
@@ -41,19 +47,19 @@ Reuses existing machinery: the `win-kvm` recipe, `scripts/vultr-snapshot.nu`
 ## Phases / TODO
 
 - **Phase 0 — decisions** (resolve before building):
-  - Vultr **Mac** availability — does it exist? If not, macOS = Mac mini / MacStadium (per the no-cross-compile rule). **VERIFY.**
+  - macOS path: **`dockurr/macos`** on a KVM host (same as `dockurr/windows`) — no Apple HW needed. Confirm the licensing posture before shared/public CI use.
   - **Persistent vs ephemeral** runners: persistent keeps the cache (the whole point) but bills continuously and is a security risk on public repos. Lean persistent + on-demand wake, gated to trusted refs.
   - **Cache strategy**: native persistent `~/.cargo` + per-repo `target/` on the desktop disk (simplest, biggest win) vs sccache.
 - **Phase 1 — `build-linux` (proof)**: provision a Linux desktop; install runner agent + mise + rustup; `mise run mise:global`; register with labels; snapshot → R2. Flip **jackdaw**'s `os-matrix` to the self-hosted linux runner; prove the 2nd build is fast (warm cache).
 - **Phase 2 — `build-win` on `win-kvm`**: bake runner + mise + rustup into the `windows-kvm` recipe; register; prove the jackdaw **Windows** build (the one currently failing on GitHub). Validates `vultr-snapshot.nu` on a real run (it's an unverified port today).
-- **Phase 3 — `build-mac`**: gated on a Mac-hardware path (Phase 0).
+- **Phase 3 — `build-mac`**: add a `macos` recipe using **`dockurr/macos`** (same dockur/KVM pattern as the `windows` recipe), on a KVM host. Register `[self-hosted, macos, builder]`; prove the jackdaw macOS build. Confirm the macOS-on-non-Apple-HW licensing posture first.
 - **Phase 4 — snapshot/restore lifecycle**: `builder:up` / `builder:down` / `builder:snapshot` via `vultr-snapshot.nu` + `r2`; scheduled cache-warm refresh.
 - **Phase 5 — reusable-mise-ci integration**: consuming repos set `os-matrix` to runner labels; keep GitHub runners as fallback when a desktop is down. Consider a `free-disk` / runner-selection input on `reusable-mise-ci.yml`.
 - **Phase 6 — cost + security**: feed runner uptime into the cost ledger (`state/costs.jsonl`, `costs:show`, GUI); on-demand wake vs always-on. **SECURITY:** self-hosted runners on a **public** repo run untrusted PR code — restrict to our own branches / private repos / ephemeral runners. jackdaw is a public fork → do NOT run untrusted PRs on a persistent builder.
 
 ## Risks / open questions
 
-- **Vultr Mac** — likely unavailable; macOS may have to stay on GitHub or move to dedicated Apple hardware.
+- **macOS via `dockurr/macos`** — works without Apple HW (KVM container, like dockur/windows), BUT macOS on non-Apple hardware violates Apple's EULA. OK for personal/experimental; decide before shared/public CI relies on it.
 - **Security** — public-repo self-hosted runners + untrusted PRs = RCE. Gate hard.
 - **Billing vs latency** — persistent (always paying, instant) vs snapshot-resume (cheap idle, boot latency).
 - `vultr-snapshot.nu` is an **unverified port** — Phase 2's first real `win-kvm` run is its validation.
