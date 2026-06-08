@@ -40,6 +40,28 @@ Reuses existing machinery: the `win-kvm` recipe, `scripts/vultr-snapshot.nu`
 - **`dockurr/windows-arm`** (2.2k★) — Windows-on-ARM, if we run ARM hosts (`cax*` / Apple Silicon).
 - **Linux needs none of these** — the host is already Linux, so `build-linux` runs natively on the box (no container-VM wrapper).
 
+## Foundation: Vultr Bare Metal (on-demand KVM)
+
+The KVM runners (**build-win**, **build-mac**) need `/dev/kvm`, which means bare
+metal. The economics decide the provider:
+
+- Hetzner **Cloud** — no `/dev/kvm` (TCG only, ~10× slow). ✗
+- Hetzner **Robot** — real KVM but **30-day minimum + setup fee** → can't teardown at will. ✗
+- **Vultr Bare Metal** — **hourly KVM, no minimum** → spin up → build → snapshot to R2 → destroy. Pay only for hours used. ✓ **This is why we don't need a standing Hetzner dedicated box.**
+
+(**build-linux** needs no KVM — Linux runs native, so it can go on a cheap
+Hetzner Cloud node or the same Vultr box.)
+
+**Current state — scaffolded, never run live** (`win-kvm` class):
+`scripts/vultr-{up,init,down,snapshot}.nu` + `win-kvm:*` tasks
+(`up → ip → init → deploy → rdp → down`), provisioned via `vultr-cli` (not tofu);
+`VULTR_API_KEY` wired in `fnox.toml` (keychain).
+
+**To light it up (prerequisite for build-win/build-mac):**
+1. Put the real `VULTR_API_KEY` in the keychain (`fnox set -p keychain`).
+2. One live `win-kvm:up → init → deploy → down` run — verifies provisioning + the headless PTY init.
+3. **Verify + wire `vultr-snapshot.nu`** (R2 transit) into teardown — it's an unverified port and `vultr-down.nu` does NOT preserve state today. This is the piece that makes teardown-at-will keep the **warm rust cache** (the 1h→5min win).
+
 ## How a runner works
 
 1. Desktop boots from an **R2 snapshot** pre-baked with: the GitHub Actions
