@@ -1,0 +1,38 @@
+# macOS desktop with KVM acceleration — for a KVM node class (bare metal that
+# exposes /dev/kvm: Vultr Bare Metal, Hetzner Robot, any KVM host). Same dockur
+# pattern as `windows-kvm`, using dockur/macos instead.
+#
+#   mise run recipe macos-kvm -- --context mac-kvm
+#
+# REQUIRES /dev/kvm on the node (no TCG fallback for macOS). Provision a KVM node
+# via `win-kvm:up` (Vultr BM — it's OS-agnostic, just an uncloud machine) into a
+# SEPARATE context if you also run windows on a box, then deploy this recipe.
+#
+# ⚠️ LICENSING: running macOS on non-Apple hardware violates Apple's EULA. Fine
+# for personal/experimental use; decide the posture before relying on it in
+# shared or public CI (see docs/github-ci.md).
+#
+# Access: noVNC web viewer on :8006 (no auth) — reach via an SSH tunnel, NOT
+# published. macOS has no RDP; for headless build use, enable Remote Login (SSH)
+# inside the guest after first-boot setup via the viewer.
+services:
+  macos:
+    image: dockurr/macos:latest
+    environment:
+      VERSION: "14"          # Sonoma (e.g. 11 Big Sur … 15 Sequoia)
+      RAM_SIZE: "12G"
+      CPU_CORES: "6"
+      DISK_SIZE: "96G"       # macOS needs more headroom than Windows
+      # NOTE: no KVM=N — we WANT hardware acceleration via /dev/kvm below.
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/kvm             # the whole point — native virt; macOS won't run on TCG
+    volumes:
+      - macos_storage:/storage
+    # noVNC :8006 — NO auth; reach via SSH tunnel (ssh -L 8006:localhost:8006
+    # root@<node-ip>), not published. No 3389 — macOS has no RDP.
+    restart: always
+
+volumes:
+  macos_storage:

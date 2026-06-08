@@ -22,7 +22,7 @@ onboarding a repo = pointing its `os-matrix` at our runner labels.
 |---|---|---|---|---|---|
 | **build-linux** | Vultr BM (hourly) or Hetzner Cloud `cpx*` | Linux | native | snapshot-resume | proposed |
 | **build-win** | Vultr Bare Metal (KVM) | Windows | `dockurr/windows` **KVM** | snapshot-resume | builds on `win-kvm` |
-| **build-mac** | Vultr Bare Metal (KVM) | macOS | `dockurr/macos` **KVM** | snapshot-resume | proposed — same pattern as windows |
+| **build-mac** | Vultr Bare Metal (KVM) | macOS | `dockurr/macos` **KVM** | snapshot-resume | **recipe added** (`recipes/macos-kvm/`) — needs a live KVM node + runner layer |
 
 > macOS via **`dockurr/macos`** — the same dockur/KVM container trick as
 > `dockurr/windows` (the `windows` recipe), so **no Apple hardware needed**, just
