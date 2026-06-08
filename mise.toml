@@ -27,6 +27,9 @@ hcloud   = "1.65.0"
 "github:cablehead/yoke"     = "0.4.1"
 # aws-cli — ONLY for the win-kvm R2 snapshot transit (Vultr has no hot-snapshot).
 aws                         = "2.30.4"
+# vultr-cli — provisions the win-kvm Vultr Bare Metal node (vultr-{up,init,down,
+# snapshot}.nu call it via `fnox exec`). Reads VULTR_API_KEY natively.
+"ubi:vultr/vultr-cli"       = "latest"
 
 [env]
 # Cluster context name `uc` uses.
@@ -189,8 +192,12 @@ run = "fnox exec --if-missing ignore -- nu connect/viewer-open.nu"
 #   win-kvm:up → win-kvm:ip → win-kvm:init → win-kvm:deploy → win:rdp → win-kvm:down
 # (rdp/viewer reuse the win: tasks with WIN_PROVIDER=vultr — see below.)
 # ---------------------------------------------------------------------------
+[tasks."win-kvm:onboard"]
+description = "HIL onboarding — check & guide getting every token/config the win-kvm Vultr path needs. Run this FIRST."
+run = "nu scripts/vultr-onboard.nu"
+
 [tasks."win-kvm:up"]
-description = "Provision a Vultr Bare Metal KVM node (uncloud-bootstrapped)."
+description = "Provision a Vultr Bare Metal KVM node (uncloud-bootstrapped). Run `win-kvm:onboard` first."
 run = "fnox exec --if-missing ignore -- nu scripts/vultr-up.nu"
 
 [tasks."win-kvm:ip"]

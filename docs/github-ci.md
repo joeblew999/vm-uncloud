@@ -58,7 +58,10 @@ Hetzner Cloud node or the same Vultr box.)
 `VULTR_API_KEY` wired in `fnox.toml` (keychain).
 
 **To light it up (prerequisite for build-win/build-mac):**
-1. Put the real `VULTR_API_KEY` in the keychain (`fnox set -p keychain`).
+1. **`mise run win-kvm:onboard`** — HIL onboarding: checks every prerequisite and
+   guides you through getting/setting each token (`VULTR_API_KEY`, R2 creds) and
+   picking the non-secret config (region/plan/ssh-key, enumerated once the key
+   works). Idempotent — re-run until all ✓.
 2. One live `win-kvm:up → init → deploy → down` run — verifies provisioning + the headless PTY init.
 3. **Verify + wire `vultr-snapshot.nu`** (R2 transit) into teardown — it's an unverified port and `vultr-down.nu` does NOT preserve state today. This is the piece that makes teardown-at-will keep the **warm rust cache** (the 1h→5min win).
 
