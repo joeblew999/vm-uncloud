@@ -23,7 +23,8 @@
 # loop until this is confirmed on a live node.
 services:
   windows:
-    image: dockurr/windows:5.15
+    build:
+      context: .              # Dockerfile = dockur/windows + baked /oem (install.bat)
     environment:
       VERSION: "11"
       RAM_SIZE: "12G"
@@ -35,7 +36,6 @@ services:
     volumes:
       - devwin_storage:/storage      # the Windows qcow2 disk — persists VM state across redeploys
       - devwin_shared:/data          # \\host.lan\Data inside Windows — drop your repo + key here
-      - ./oem:/oem                   # dockur runs /oem/install.bat once after Windows setup
     x-ports:
       - 3389:3389@host               # RDP — primary, authenticated entry
       - 3389:3389/udp@host

@@ -17,6 +17,11 @@
 # `mise run docker` task can build images (grants Docker access — see moltis).
 services:
   dev:
+    # Match the dev node's arch so what you build runs on the cluster too: cpx*
+    # is x86 → linux/amd64 (the dev.tfvars.example default). On a cax* ARM dev
+    # node, change this to linux/arm64. Without it, building on an Apple-silicon
+    # Mac produces arm64 and won't run on a cpx node (see README §Deploy).
+    platform: linux/amd64
     build:
       context: .
       args:

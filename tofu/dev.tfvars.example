@@ -27,6 +27,9 @@ location     = "fsn1"
 
 dev          = true               # opens the dev SSH port, points dev.<domain> here, no wildcard
 dev_ssh_port = 2222               # host port the dev-linux recipe maps to the container's sshd
+# ^ if you change 2222, also set DEV_SSH_PORT for `dev:deploy` (the recipe's
+#   published port) and DEV_PORT for the connect tasks (dev:ssh/dev:code/ssh:wait)
+#   — they default to 2222 independently of this firewall rule.
 
 ssh_key_name         = "gedw99_hetzner"
 ssh_private_key_file = "~/.ssh/gedw99_hetzner"

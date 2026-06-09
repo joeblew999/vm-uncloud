@@ -27,6 +27,9 @@ location     = "fsn1"
 windows      = true               # RDP :3389 + windows.<domain> (the guest desktop)
 dev          = true               # also open the dev SSH port for Remote-SSH / rsync into the guest
 dev_ssh_port = 2222               # host port the dev-windows recipe maps to the guest's sshd
+# ^ if you change 2222, also set DEV_SSH_PORT for `dev:deploy:win`. NOTE the win:*
+#   RDP tasks target WIN_NODE (default win-batch-1) — set WIN_NODE=dev-win-1 (e.g.
+#   in mise.local.toml) so win:rdp / win:rdp:wait hit THIS node.
 
 ssh_key_name         = "gedw99_hetzner"
 ssh_private_key_file = "~/.ssh/gedw99_hetzner"
