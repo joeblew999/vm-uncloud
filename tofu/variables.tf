@@ -88,3 +88,22 @@ variable "windows" {
   type        = bool
   default     = false
 }
+
+# Node class. When true, this is a remote DEV node (dev-linux / dev-windows
+# recipes): opens the dev-container SSH port (var.dev_ssh_port, restricted to
+# ssh_allowed_ips) so VS Code Remote-SSH / `devcontainer` / rsync can reach the
+# container, points dev.<domain> at it, and does NOT claim the *.<domain>
+# wildcard (it's its own teardownable node, like a Windows node). Combine with
+# `windows = true` for a dev-windows desktop node. Use its own context/workspace
+# + dev.tfvars so its lifecycle is independent of the cluster.
+variable "dev" {
+  description = "Provision this node as a remote dev node (opens dev SSH port; no wildcard role)"
+  type        = bool
+  default     = false
+}
+
+variable "dev_ssh_port" {
+  description = "Host TCP port the dev recipe publishes its in-container sshd on (x-ports <port>:22@host)"
+  type        = number
+  default     = 2222
+}

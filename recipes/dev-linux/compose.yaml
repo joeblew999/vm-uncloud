@@ -1,0 +1,52 @@
+# dev-linux — a remote Linux DEV container, run as an uncloud recipe. The point:
+# a developer keeps their repo on their Mac, syncs it here, and compiles/tests on
+# a real linux/amd64 box that MATCHES the cluster deploy target (no cross-compile
+# guesswork from Apple silicon). Toolchains come from the project's own mise.toml.
+#
+#   mise run dev:up                      # provision the dev node (dev context)
+#   mise run dev:deploy                  # build + deploy this recipe onto it
+#   mise run dev:ssh:wait                # wait until sshd accepts connections
+#   mise run dev:code                    # VS Code Remote-SSH into /workspace
+#   # then from the PROJECT repo (tasks/dev.toml): mise run dev:build
+#
+# Entry is sshd (Remote-SSH / rsync / `devcontainer exec`), published on the host
+# via x-ports "<DEV_SSH_PORT>:22@host" — the tofu `dev` node class opens that port
+# in the firewall (restricted to ssh_allowed_ips). prepare.nu injects the dev's
+# public key (SSH_PUBKEY), the login user (DEV_USER), and the host port
+# (DEV_SSH_PORT). The host Docker socket is mounted so the project's
+# `mise run docker` task can build images (grants Docker access — see moltis).
+services:
+  dev:
+    # Match the dev node's arch so what you build runs on the cluster too: cpx*
+    # is x86 → linux/amd64 (the dev.tfvars.example default). On a cax* ARM dev
+    # node, change this to linux/arm64. Without it, building on an Apple-silicon
+    # Mac produces arm64 and won't run on a cpx node (see README §Deploy).
+    platform: linux/amd64
+    build:
+      context: .
+      args:
+        DEV_USER: ${DEV_USER}
+    environment:
+      DEV_USER: ${DEV_USER}
+      SSH_PUBKEY: ${SSH_PUBKEY}
+      MISE_DATA_DIR: /mnt/mise-data
+      # Dedicated dev/CI OrangeVault account — lets `fnox exec` resolve project
+      # secrets in-container (ov-bootstrap unlocks at start). prepare.nu injects
+      # these from the operator's fnox keychain; empty = secrets disabled (the
+      # container still works). NEVER a personal vault. See docs/DEVCONTAINERS.md.
+      OV_SERVER: ${OV_SERVER}
+      OV_EMAIL: ${OV_EMAIL}
+      OV_BW_CLIENTID: ${OV_BW_CLIENTID}
+      OV_BW_CLIENTSECRET: ${OV_BW_CLIENTSECRET}
+      OV_MASTER_PASSWORD: ${OV_MASTER_PASSWORD}
+    volumes:
+      - dev_workspace:/workspace        # the synced repo + build outputs; persists across redeploys
+      - dev_mise:/mnt/mise-data         # mise tool cache (toolchains, registries) — keep it warm
+      - /var/run/docker.sock:/var/run/docker.sock
+    x-ports:
+      - ${DEV_SSH_PORT}:22@host
+    restart: always
+
+volumes:
+  dev_workspace:
+  dev_mise:

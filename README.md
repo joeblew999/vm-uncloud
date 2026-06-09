@@ -102,6 +102,44 @@ mise run recipe wordpress-galera # EXPERIMENTAL — multi-master (needs node_cou
 
 A recipe is a folder: `compose.yaml` + optional `prepare.nu` (generates and persists its own secrets). Adding one touches no shared code.
 
+## Remote dev (Dev Containers)
+
+Keep your repo on your Mac; compile/test it on a remote box that matches the
+deploy target (real `linux/amd64`, or real Windows). The dev environment is just
+a recipe — `dev-linux` (Dev Containers base + mise + sshd) or `dev-windows`
+(dockur + mise/git). Full guide: [`docs/DEVCONTAINERS.md`](docs/DEVCONTAINERS.md).
+
+```bash
+cp tofu/dev.tfvars.example tofu/dev.tfvars   # one-time
+mise run dev:up        # provision a teardownable Linux dev node (dev context)
+mise run dev:deploy    # build + deploy the dev-linux recipe onto it
+mise run dev:ssh:wait  # wait for SSH, then:
+mise run dev:code      # VS Code Remote-SSH into /workspace   (or mise run dev:ssh)
+mise run dev:down      # destroy when idle
+```
+
+From a **project** repo, include the shared task lib (mise pulls just the one
+file, like `cliff.toml`) and drive the loop with your own build/test/release tasks.
+The shared tasks are namespaced `uncloud:dev:*` so they can't clash with the
+project's own tasks:
+
+```toml
+[task_config]
+includes = ["git::https://github.com/joeblew999/vm-uncloud.git//tasks/dev.toml?ref=<tag>"]
+```
+
+```bash
+mise run uncloud:dev:build     # rsync the repo to the node + run its `mise run build` there
+mise run uncloud:dev:release   # ...build + docker + GitHub release, on the node
+mise run uncloud:dev:container # portable path: `devcontainer up` against the node's Docker
+```
+
+Secrets come from a dedicated [OrangeVault](https://github.com/joeblew999/orangevault)
+account via fnox (`mise run dev:secrets:set` → `dev:secrets:check`), and deploys can
+register their live URLs back into OrangeVault so other systems discover them by
+name — see [`docs/DEVCONTAINERS.md`](docs/DEVCONTAINERS.md) (Secrets) and
+[`docs/REGISTRY.md`](docs/REGISTRY.md).
+
 ## State
 
 ```bash

@@ -18,6 +18,13 @@ includes = [
 [tools]
 opentofu = "1.12.1"
 hcloud   = "1.65.0"
+# fnox — the secret client every task uses (`fnox exec`/`fnox get` inject keychain
+# secrets). Pinned so `mise install` provides it automatically; same version the
+# orangevault repo uses. Without this it had to be installed out-of-band.
+"github:jdx/fnox" = "1.24"
+# nushell — pinned so `mise install` provides the `nu` every script + the CI parse
+# checks run on (gui/serve.nu, connect/*, scripts/*, recipe prepare.nu).
+"aqua:nushell/nushell" = "0.111.0"
 # Web GUI control plane (gui/server/serve.nu): http-nu serves it, xs is the
 # event bus, pitchfork supervises both as daemons. joeblew999 forks add iroh
 # relay support (FS sync across clones).
@@ -53,6 +60,12 @@ VULTR_SSH_KEY_ID = ""
 # `mise run r2:bootstrap`; R2_ACCESS_KEY_ID/SECRET live in the keychain.
 R2_ENDPOINT = ""
 R2_BUCKET   = ""
+
+# OrangeVault (dev-container secrets). The LIVE vault URL — public, non-secret, so
+# it's defaulted here for zero-config; override in mise.local.toml for your own
+# instance. The dev/CI ACCOUNT creds (email / API key / master password) are secret
+# and live in the keychain — set them with `mise run dev:secrets:set`.
+ORANGEVAULT_DEV_DOMAIN = "https://orangevault.gedw99.workers.dev"
 # SSH keys are NOT set here — they live once in tofu/terraform.tfvars
 # (ssh_key_name + ssh_private_key_file) and flow to the scripts via tofu output.
 
@@ -231,6 +244,112 @@ run = "fnox exec --if-missing ignore -- nu scripts/vultr-snapshot.nu"
 [tasks."win-kvm:down"]
 description = "Destroy the win-kvm Vultr node. Run win-kvm:snapshot FIRST to preserve state (not automatic)."
 run = "fnox exec --if-missing ignore -- nu scripts/vultr-down.nu"
+
+# ---------------------------------------------------------------------------
+# dev — remote DEV nodes (dev-linux / dev-windows recipes). A developer keeps
+# their repo on their Mac and compiles/tests on a real remote box that matches
+# the deploy target. Same idiom as win:* — a teardownable node class in its own
+# context (tofu/dev.tfvars, tofu/dev-win.tfvars). Toolchains come from each
+# PROJECT's mise.toml; the project drives the loop via the shared tasks/dev.toml.
+# See docs/DEVCONTAINERS.md.
+#   mise run dev:up → dev:deploy → dev:ssh:wait → dev:code → ... → dev:down
+# ---------------------------------------------------------------------------
+[tasks."dev:up"]
+description = "Provision the dedicated Linux dev node (dev context)."
+run = "fnox exec --if-missing ignore -- nu scripts/up.nu --context dev"
+
+[tasks."dev:deploy"]
+description = "Build + deploy the dev-linux recipe (mise + sshd) onto the dev node."
+run = "fnox exec --if-missing ignore -- nu scripts/recipe.nu dev-linux --context dev"
+
+[tasks."dev:ip"]
+description = "Public IPv4 of the Linux dev node."
+run = "fnox exec --if-missing ignore -- hcloud server ip dev-1"
+
+[tasks."dev:ssh:wait"]
+description = "Block until the dev container accepts SSH on its published port."
+run = "nu connect/ssh-wait.nu"
+
+[tasks."dev:ssh"]
+description = "Open an interactive SSH session into the dev container (terminal entry)."
+run = "nu connect/ssh-open.nu"
+
+[tasks."dev:code"]
+description = "Open VS Code Remote-SSH into the dev container at /workspace."
+run = "nu connect/code-open.nu"
+
+[tasks."dev:status"]
+description = "Describe the Linux dev node (state, type, IP)."
+run = "fnox exec --if-missing ignore -- hcloud server describe dev-1"
+
+[tasks."dev:down"]
+# Headless --yes (unlike the cluster/win teardown which prompts): a dev node is
+# reproducible — its only state (the synced repo) lives on the dev's Mac — so
+# operations / CI / Claude Code can tear it down non-interactively. Re-create
+# with dev:up + dev:deploy.
+description = "Destroy the Linux dev node (auto-confirmed; reproducible — re-sync after dev:up)."
+run = "fnox exec --if-missing ignore -- nu scripts/down.nu --context dev --yes"
+
+# dev-windows — a Windows dev desktop node (windows=true AND dev=true). RDP is
+# the primary entry; SSH/Remote-SSH into the guest is EXPERIMENTAL. Override
+# DEV_NODE=dev-win-1 / DEV_USER=Docker for the connect helpers against it.
+[tasks."dev:up:win"]
+description = "Provision the Windows dev node (dev-win context)."
+run = "fnox exec --if-missing ignore -- nu scripts/up.nu --context dev-win"
+
+[tasks."dev:deploy:win"]
+description = "Deploy the dev-windows recipe (dockur + oem provisioning) onto the dev-win node."
+run = "fnox exec --if-missing ignore -- nu scripts/recipe.nu dev-windows --context dev-win"
+
+[tasks."dev:down:win"]
+# Headless --yes too. NOTE: this destroys the Windows guest disk (no snapshot —
+# unlike win:down). If you need to preserve guest state, use the win:* flow
+# (win:snapshot/win:down) on a win-batch node instead of a dev-win node.
+description = "Destroy the Windows dev node (auto-confirmed; guest state is NOT snapshotted)."
+run = "fnox exec --if-missing ignore -- nu scripts/down.nu --context dev-win --yes"
+
+# dev:secrets — wire the dev containers to OrangeVault (the running Bitwarden-compat
+# vault). The vault URL defaults from $ORANGEVAULT_DEV_DOMAIN; only the dedicated
+# dev/CI ACCOUNT creds need setting. See docs/DEVCONTAINERS.md "Secrets via OrangeVault".
+[tasks."dev:secrets:set"]
+description = "Seed the dedicated dev/CI OrangeVault account creds in the keychain (skips keys already set)."
+run = """
+echo "Dedicated dev/CI OrangeVault account — NEVER your personal vault. Skips keys already set."
+for k in ORANGEVAULT_DEV_EMAIL ORANGEVAULT_DEV_BW_CLIENTID ORANGEVAULT_DEV_BW_CLIENTSECRET ORANGEVAULT_DEV_MASTER_PASSWORD; do
+  fnox get "$k" >/dev/null 2>&1 && echo "$k: already set" || fnox set --global -p keychain "$k"
+done
+"""
+
+[tasks."dev:secrets:check"]
+description = "Doctor: verify OrangeVault is reachable, its DOMAIN is correct, and the dev/CI creds are set."
+run = "nu scripts/dev-secrets-check.nu"
+
+# registry — publish "what's live" into OrangeVault so other systems discover it by
+# name (vmu/<context>/<service> with the URL in the `uri` field). recipe deploys
+# auto-publish when VMU_REGISTRY=1 (set it in mise.local.toml once verified); these
+# tasks exercise it manually first. See docs/REGISTRY.md.
+[tasks."registry:list"]
+description = "List live systems registered in OrangeVault (mise run registry:list [-- --context cluster])."
+run = "nu scripts/registry.nu list"
+
+[tasks."registry:publish"]
+description = "Manually register a live URL: mise run registry:publish -- --context cluster --service moltis --url https://moltis.<domain>"
+run = "nu scripts/registry.nu publish"
+
+[tasks."registry:remove"]
+description = "Remove a registered system: mise run registry:remove -- --context cluster --service moltis"
+run = "nu scripts/registry.nu remove"
+
+# ov-admin — thin ConnectRPC client for orangevault-admin (JSON over HTTP; no
+# binary). Needs ORANGEVAULT_ADMIN_DOMAIN (+ _TOKEN for non-healthz). The admin
+# worker's auth is WIP — verify-on-first-use. See docs/orangevault-admin.md.
+[tasks."ov-admin:healthz"]
+description = "Ping orangevault-admin (ConnectRPC Healthz)."
+run = "nu scripts/ov-admin.nu healthz"
+
+[tasks."ov-admin:list-users"]
+description = "List users via orangevault-admin (needs ORANGEVAULT_ADMIN_TOKEN)."
+run = "nu scripts/ov-admin.nu list-users"
 
 # ── r2 (Cloudflare R2 — snapshot transit bucket for win-kvm) ────────────────
 [tasks."r2:bootstrap"]

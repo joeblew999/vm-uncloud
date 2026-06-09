@@ -1,0 +1,3 @@
+# Windows batch scripts (dockur /oem provisioning) must keep CRLF line endings so
+# they run correctly inside the Windows guest, regardless of the dev's platform.
+*.bat text eol=crlf

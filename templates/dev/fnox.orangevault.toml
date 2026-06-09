@@ -1,0 +1,22 @@
+# Add this to your PROJECT's fnox.toml to resolve secrets from OrangeVault (the
+# dedicated dev/CI vault) when building on a vm-uncloud dev node. The dev
+# container unlocks the vault at start (ov-bootstrap), so `fnox exec` Just Works
+# there; on your Mac the same items resolve via your local bw/rbw. See
+# docs/DEVCONTAINERS.md "Secrets via OrangeVault".
+#
+# Backend defaults to `bw` (what the dev-linux image bakes). The repo's preferred
+# client is rbw — set backend = "rbw" once your image/host has it.
+
+[providers.orangevault]
+type = "bitwarden"
+# backend = "rbw"               # optional; default "bw"
+# organization_id = "<org-id>"  # scope to the dev/CI org
+# collection = "<collection-id>"# scope to a dev-secrets collection
+
+[secrets]
+# Reference items stored in the dedicated dev/CI OrangeVault account. `value` is
+# "ItemName" (password field) or "ItemName/fieldname"
+# (username|password|notes|uri|totp). Publish them from your Mac (see the docs):
+#   fnox set -p orangevault GH_TOKEN        # or use the bw/rbw CLI directly
+GH_TOKEN = { provider = "orangevault", value = "github-token/password" }
+# REGISTRY_TOKEN = { provider = "orangevault", value = "ghcr/password" }

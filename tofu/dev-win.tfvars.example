@@ -1,0 +1,39 @@
+# dev-win — a remote DEV node that is a Windows desktop (dockur/windows + dev
+# tooling). It is BOTH a Windows node (RDP :3389, windows.<domain>) AND a dev
+# node (the dev SSH port for Remote-SSH / rsync into the guest). Copy to
+# dev-win.tfvars and run it in its own context/workspace:
+#
+#   mise run dev:up:win                      # provision the Windows dev node
+#   mise run dev:deploy:win                  # deploy the dev-windows recipe
+#   mise run win:rdp:wait && mise run win:rdp # RDP in while Windows installs/provisions
+#   # ...build/test Rust on Windows; sync the repo via \\host.lan\Data or SSH...
+#   mise run dev:down:win                    # destroy when idle (snapshot first if you care)
+#
+# Windows is heavy: use a cpx42-class node (8/16). KVM=N (TCG) on Hetzner Cloud —
+# slow but cheap; for native speed use the win-kvm bare-metal path instead.
+# EXPERIMENTAL: the dev-windows guest provisioning (OpenSSH + mise via /oem) is
+# unverified end-to-end — confirm on first deploy (see recipes/dev-windows).
+
+cloudflare_zone_id = "d24de2d0e3a152395432f6767c4c472e"  # amplifycms.com
+domain             = "amplifycms.com"
+dns_apex           = false
+
+cluster_name = "dev-win"          # names the server (dev-win-1) + firewall + uncloud context
+node_count   = 1
+server_type  = "cpx42"            # 8 vCPU / 16 GB — Windows needs the headroom
+image        = "ubuntu-24.04"
+location     = "fsn1"
+
+windows      = true               # RDP :3389 + windows.<domain> (the guest desktop)
+dev          = true               # also open the dev SSH port for Remote-SSH / rsync into the guest
+dev_ssh_port = 2222               # host port the dev-windows recipe maps to the guest's sshd
+# ^ if you change 2222, also set DEV_SSH_PORT for `dev:deploy:win`. NOTE the win:*
+#   RDP tasks target WIN_NODE (default win-batch-1) — set WIN_NODE=dev-win-1 (e.g.
+#   in mise.local.toml) so win:rdp / win:rdp:wait hit THIS node.
+
+ssh_key_name         = "gedw99_hetzner"
+ssh_private_key_file = "~/.ssh/gedw99_hetzner"
+
+# RDP :3389 + node :22 + the dev SSH port are restricted to this allowlist —
+# TIGHTEN to your IP, e.g. ssh_allowed_ips = ["203.0.113.4/32"]
+ssh_allowed_ips = ["0.0.0.0/0", "::/0"]

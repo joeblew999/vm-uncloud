@@ -1,0 +1,47 @@
+# dev-windows — a remote Windows DEV desktop, run as an uncloud recipe. Same idea
+# as dev-linux, for the cases that must compile/test on real Windows. It is the
+# `windows` recipe (dockur/windows) PLUS first-boot dev provisioning via /oem
+# (mise + git, and best-effort OpenSSH). Deploy it onto a node that is BOTH a
+# windows node and a dev node (tofu: windows = true, dev = true — see
+# tofu/dev-win.tfvars.example), so RDP :3389 and the dev SSH port are both open.
+#
+#   mise run dev:up:win                  # provision the Windows dev node
+#   mise run dev:deploy:win              # deploy this recipe onto it
+#   mise run win:rdp:wait && mise run win:rdp   # RDP in (user Docker / pass admin)
+#
+# ── HOW YOUR REPO GETS IN (primary, verified path) ──────────────────────────
+# The `devwin_shared` volume appears inside Windows as \\host.lan\Data. rsync /
+# copy your repo there (or over RDP), open a terminal in Windows, and run the
+# project's `mise run build` / `mise run test`. mise + git are installed by
+# oem/install.bat on first boot.
+#
+# ── EXPERIMENTAL: Remote-SSH into the guest ─────────────────────────────────
+# oem/install.bat also tries to enable OpenSSH Server and authorize a key found
+# at \\host.lan\Data\dev\authorized_keys. Reaching it from outside additionally
+# needs dockur to forward the published :22 to the guest — UNVERIFIED here; the
+# port mapping below is best-effort. RDP + the shared folder is the supported
+# loop until this is confirmed on a live node.
+services:
+  windows:
+    build:
+      context: .              # Dockerfile = dockur/windows + baked /oem (install.bat)
+    environment:
+      VERSION: "11"
+      RAM_SIZE: "12G"
+      CPU_CORES: "6"
+      DISK_SIZE: "64G"
+      KVM: "N"                       # Hetzner Cloud has no /dev/kvm (TCG; ~10x slower)
+    cap_add:
+      - NET_ADMIN
+    volumes:
+      - devwin_storage:/storage      # the Windows qcow2 disk — persists VM state across redeploys
+      - devwin_shared:/data          # \\host.lan\Data inside Windows — drop your repo + key here
+    x-ports:
+      - 3389:3389@host               # RDP — primary, authenticated entry
+      - 3389:3389/udp@host
+      - ${DEV_SSH_PORT}:22@host      # EXPERIMENTAL guest OpenSSH (verify dockur forwards :22)
+    restart: always
+
+volumes:
+  devwin_storage:
+  devwin_shared:

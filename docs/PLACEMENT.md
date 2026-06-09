@@ -11,6 +11,8 @@ and whether they need real virtualization (KVM). This is the map. Pricing is in
 | **cluster** | Hetzner Cloud `cpx22` (2/4) | container | **always-on** | Moltis + light web containers. **LIVE** (`amplifycms.com`). |
 | **win-batch** | Hetzner Cloud `cpx42` (8/16) | dockur **TCG** (`KVM=N`) | **ephemeral**: up → `recipe windows` → snapshot → down | Windows batch / unattended (Revit RBP). ~10× slower than KVM, but cheap & hourly. **NEXT TO BUILD.** |
 | **win-kvm** | Vultr Bare Metal (hourly) or Hetzner Robot `ax*` | dockur **KVM** (`/dev/kvm`) | ephemeral (Vultr) / 30-day-min (Robot) | Interactive Windows where TCG is too slow. **SCAFFOLDED** (`win-kvm:*`; needs a Vultr key + live run). |
+| **dev** | Hetzner Cloud `cpx42`/`cpx32` (x86; `cax*` for ARM) | container | **ephemeral**: `dev:up` → `dev:deploy` → work → `dev:down` | Remote dev container (`dev-linux`): compile/test a project on a box that matches the deploy target. SSH-only (dev port), no wildcard. See [`DEVCONTAINERS.md`](DEVCONTAINERS.md). |
+| **dev-win** | Hetzner Cloud `cpx42` (8/16) | dockur **TCG** (`KVM=N`) | ephemeral: `dev:up:win` → `dev:deploy:win` → work → `dev:down:win` | Remote dev on real Windows (`dev-windows` = `windows` + mise/git/OpenSSH via `/oem`). Both `windows = true` **and** `dev = true`. **EXPERIMENTAL** (guest SSH unverified). |
 
 **Rule:** never co-locate Windows on the `cluster` node (it's a 2/4 box; Windows
 needs 8/16+). Each Windows node is **dedicated and teardownable** so it's billed
@@ -42,12 +44,17 @@ Each ephemeral node class is its **own uncloud context** (separate tofu state +
 ```
 UNCLOUD_CONTEXT=hetzner       # cluster node (Moltis) — live
 UNCLOUD_CONTEXT=win-batch     # Windows cloud node — up/down on demand
+UNCLOUD_CONTEXT=dev           # Linux dev node — dev:up/dev:down on demand
+UNCLOUD_CONTEXT=dev-win       # Windows dev node — dev:up:win/dev:down:win
 ```
 
-RDP / viewer / GUI resolve the target node's IP from its context (tofu output /
-`hcloud server ip <node>` / `uc machine ls`). Firewall: the Windows node opens
-`:3389` (RDP, restrict to your IP) — the cluster firewall opens only
-22/80/443/51820, so the win node gets its own rule.
+RDP / viewer / SSH / GUI resolve the target node's IP from its context (tofu
+output / `hcloud server ip <node>` / `uc machine ls`). Firewall: the cluster
+firewall opens only 22/80/443/51820; each other class gets its own rule —
+the Windows node opens `:3389` (RDP), the **dev** node opens the dev SSH port
+(`dev_ssh_port`, default `2222`) for Remote-SSH/rsync into the container, both
+restricted to `ssh_allowed_ips`. A **dev-win** node sets both flags, so it opens
+RDP `:3389` and the dev SSH port.
 
 > **Future:** RDP is plain TCP, so it's exposed via a raw `:3389@host` port + a
 > dedicated firewall rule today. When uncloud ships **L4 TCP passthrough**

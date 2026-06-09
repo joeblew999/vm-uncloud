@@ -72,6 +72,20 @@ resource "hcloud_firewall" "uncloud" {
       source_ips = var.ssh_allowed_ips
     }
   }
+
+  # Dev-container SSH for remote dev nodes only — the dev recipe publishes its
+  # in-container sshd on this host port (x-ports "<port>:22@host"). Node :22 stays
+  # the operator's root SSH; this is the developer's Remote-SSH / rsync entry.
+  # Restricted to the SSH allowlist (tighten ssh_allowed_ips to your IP).
+  dynamic "rule" {
+    for_each = var.dev ? [tostring(var.dev_ssh_port)] : []
+    content {
+      direction  = "in"
+      protocol   = "tcp"
+      port       = rule.value
+      source_ips = var.ssh_allowed_ips
+    }
+  }
 }
 
 resource "hcloud_server" "node" {
@@ -122,7 +136,7 @@ resource "hcloud_server" "node" {
 # challenge (no HTTP-01, no port-80/propagation timing, no per-host rate limits).
 # proxied = false so Caddy terminates TLS directly (DNS-only / grey cloud).
 resource "cloudflare_dns_record" "wildcard" {
-  count = (var.domain == "" || var.windows) ? 0 : 1
+  count = (var.domain == "" || var.windows || var.dev) ? 0 : 1
 
   zone_id = var.cloudflare_zone_id
   name    = "*.${var.domain}"
@@ -139,6 +153,21 @@ resource "cloudflare_dns_record" "windows" {
 
   zone_id = var.cloudflare_zone_id
   name    = "windows.${var.domain}"
+  type    = "A"
+  content = hcloud_server.node[0].ipv4_address
+  ttl     = 60
+  proxied = false
+}
+
+# Remote dev nodes get a single dev.<domain> A record (so Remote-SSH / rsync /
+# the connect helpers resolve the node by name). A dev-windows node sets BOTH
+# windows = true and dev = true; there the windows.<domain> record already points
+# at it, so this dev record is created only for dev-only (non-windows) nodes.
+resource "cloudflare_dns_record" "dev" {
+  count = (var.domain != "" && var.dev && !var.windows) ? 1 : 0
+
+  zone_id = var.cloudflare_zone_id
+  name    = "dev.${var.domain}"
   type    = "A"
   content = hcloud_server.node[0].ipv4_address
   ttl     = 60
