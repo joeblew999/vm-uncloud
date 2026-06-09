@@ -98,6 +98,13 @@ def main [recipe?: string, --context: string = ""] {
     nu state/log.nu ...$args
   } | ignore
 
+  # Best-effort: register the live URL in OrangeVault so other systems can discover
+  # it (registry.nu self-guards on missing bw/creds; `| ignore` → can't break the
+  # deploy). Opt-in via VMU_REGISTRY=1 until verified against a live vault.
+  if ((($env.VMU_REGISTRY? | default "") == "1") and ($host | is-not-empty)) {
+    do { nu scripts/registry.nu publish --context $cluster --service $recipe --url $"https://($host)" } | ignore
+  }
+
   print ""
   print "Deployed. Check: mise run status"
 }

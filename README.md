@@ -100,6 +100,12 @@ mise run uncloud:dev:release   # ...build + docker + GitHub release, on the node
 mise run uncloud:dev:container # portable path: `devcontainer up` against the node's Docker
 ```
 
+Secrets come from a dedicated [OrangeVault](https://github.com/joeblew999/orangevault)
+account via fnox (`mise run dev:secrets:set` → `dev:secrets:check`), and deploys can
+register their live URLs back into OrangeVault so other systems discover them by
+name — see [`docs/DEVCONTAINERS.md`](docs/DEVCONTAINERS.md) (Secrets) and
+[`docs/REGISTRY.md`](docs/REGISTRY.md).
+
 ## State
 
 ```bash

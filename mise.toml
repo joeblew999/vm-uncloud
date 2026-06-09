@@ -317,6 +317,22 @@ done
 description = "Doctor: verify OrangeVault is reachable, its DOMAIN is correct, and the dev/CI creds are set."
 run = "nu scripts/dev-secrets-check.nu"
 
+# registry — publish "what's live" into OrangeVault so other systems discover it by
+# name (vmu/<context>/<service> with the URL in the `uri` field). recipe deploys
+# auto-publish when VMU_REGISTRY=1 (set it in mise.local.toml once verified); these
+# tasks exercise it manually first. See docs/REGISTRY.md.
+[tasks."registry:list"]
+description = "List live systems registered in OrangeVault (mise run registry:list [-- --context cluster])."
+run = "nu scripts/registry.nu list"
+
+[tasks."registry:publish"]
+description = "Manually register a live URL: mise run registry:publish -- --context cluster --service moltis --url https://moltis.<domain>"
+run = "nu scripts/registry.nu publish"
+
+[tasks."registry:remove"]
+description = "Remove a registered system: mise run registry:remove -- --context cluster --service moltis"
+run = "nu scripts/registry.nu remove"
+
 # ── r2 (Cloudflare R2 — snapshot transit bucket for win-kvm) ────────────────
 [tasks."r2:bootstrap"]
 description = "Guided one-time R2 bucket + token setup for the win-kvm snapshot pipeline."
