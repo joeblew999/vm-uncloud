@@ -18,6 +18,10 @@ includes = [
 [tools]
 opentofu = "1.12.1"
 hcloud   = "1.65.0"
+# NOTE: nushell is NOT pinned here — `mise run ci` uses whatever `nu` is present.
+# The scripts need nushell >= 0.109 (connect/rdp-wait.nu uses `job spawn
+# --description`; older `nu` fails the CI parse). Consider pinning it, e.g.
+# `"aqua:nushell/nushell" = "0.109.0"`. See docs/toolchain-nushell.md.
 # Web GUI control plane (gui/server/serve.nu): http-nu serves it, xs is the
 # event bus, pitchfork supervises both as daemons. joeblew999 forks add iroh
 # relay support (FS sync across clones).
