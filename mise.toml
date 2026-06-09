@@ -18,6 +18,10 @@ includes = [
 [tools]
 opentofu = "1.12.1"
 hcloud   = "1.65.0"
+# fnox — the secret client every task uses (`fnox exec`/`fnox get` inject keychain
+# secrets). Pinned so `mise install` provides it automatically; same version the
+# orangevault repo uses. Without this it had to be installed out-of-band.
+"github:jdx/fnox" = "1.24"
 # NOTE: nushell is NOT pinned here — `mise run ci` uses whatever `nu` is present.
 # The scripts need nushell >= 0.109 (connect/rdp-wait.nu uses `job spawn
 # --description`; older `nu` fails the CI parse). Consider pinning it, e.g.
