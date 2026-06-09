@@ -40,6 +40,14 @@ if [ -S /var/run/docker.sock ]; then
   fi
 fi
 
+# Unlock the dedicated dev/CI OrangeVault account (if its creds were injected) so
+# `fnox exec` resolves project secrets inside the container. Runs as the dev user;
+# non-fatal — the container is fully usable without it. See ov-bootstrap +
+# docs/DEVCONTAINERS.md. `su -p` preserves the injected OV_*/BW_* env.
+if command -v ov-bootstrap >/dev/null 2>&1; then
+  su -p "$DEV_USER" -s /bin/bash -c 'ov-bootstrap || true' || true
+fi
+
 # Keys only — no password auth.
 sed -i 's/^#\?PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config
 ssh-keygen -A

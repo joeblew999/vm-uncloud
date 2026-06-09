@@ -53,13 +53,16 @@ rsync -az --delete --filter=':- .gitignore' --exclude '.git/index.lock' \
 ["uncloud:dev:exec"]
 description = "Run a project mise task ON the dev node: mise run uncloud:dev:exec -- build"
 usage = 'arg "<task>" var=#true'
+# If the project ships a fnox.toml, the remote task runs under `fnox exec` so its
+# secrets resolve (from OrangeVault via the dev container's unlocked session — see
+# docs/DEVCONTAINERS.md "Secrets"). Otherwise it runs plain.
 run = '''
 set -eu
 : "${DEV_HOST:?set DEV_HOST in mise.local.toml (the dev node)}"
 PORT="${DEV_PORT:-2222}"; RUSER="${DEV_USER:-vscode}"; ROOT="${DEV_REMOTE_ROOT:-/workspace}"; PROJ="${DEV_PROJECT:-$(basename "$PWD")}"
-echo "==> $RUSER@$DEV_HOST: (cd $ROOT/$PROJ && mise run $usage_task)"
+echo "==> $RUSER@$DEV_HOST: (cd $ROOT/$PROJ && [fnox exec] mise run $usage_task)"
 ssh -p "$PORT" -o StrictHostKeyChecking=accept-new ${DEV_SSH_KEY:+-i "$DEV_SSH_KEY"} \
-  "$RUSER@$DEV_HOST" "cd '$ROOT/$PROJ' && mise run $usage_task"
+  "$RUSER@$DEV_HOST" "cd '$ROOT/$PROJ' && if [ -f fnox.toml ] && command -v fnox >/dev/null 2>&1; then fnox exec -- mise run $usage_task; else mise run $usage_task; fi"
 '''
 
 ["uncloud:dev:build"]

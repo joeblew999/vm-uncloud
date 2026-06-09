@@ -30,6 +30,15 @@ services:
       DEV_USER: ${DEV_USER}
       SSH_PUBKEY: ${SSH_PUBKEY}
       MISE_DATA_DIR: /mnt/mise-data
+      # Dedicated dev/CI OrangeVault account — lets `fnox exec` resolve project
+      # secrets in-container (ov-bootstrap unlocks at start). prepare.nu injects
+      # these from the operator's fnox keychain; empty = secrets disabled (the
+      # container still works). NEVER a personal vault. See docs/DEVCONTAINERS.md.
+      OV_SERVER: ${OV_SERVER}
+      OV_EMAIL: ${OV_EMAIL}
+      OV_BW_CLIENTID: ${OV_BW_CLIENTID}
+      OV_BW_CLIENTSECRET: ${OV_BW_CLIENTSECRET}
+      OV_MASTER_PASSWORD: ${OV_MASTER_PASSWORD}
     volumes:
       - dev_workspace:/workspace        # the synced repo + build outputs; persists across redeploys
       - dev_mise:/mnt/mise-data         # mise tool cache (toolchains, registries) — keep it warm

@@ -178,6 +178,77 @@ For native-speed Windows (TCG is ~10× slower) use the bare-metal `win-kvm` clas
 
 ---
 
+## Secrets via OrangeVault
+
+Your project's build/test/release tasks need secrets on the dev node — `GH_TOKEN`
+for the release, registry creds for `docker push`, etc. The dev container has no
+OS keychain, so it pulls them from **[OrangeVault](https://github.com/joeblew999/orangevault)**
+— your Bitwarden-compatible vault on Cloudflare — via **fnox's `bitwarden`
+provider**. Same `fnox`/mise you already run in every repo; it resolves from the
+vault wherever there's a network (dev node, CI, Claude-web), not just where a
+keychain exists.
+
+**Security boundary — a dedicated dev/CI account.** The dev container is given an
+OrangeVault account's credentials so it can unlock the vault, so it must be a
+**separate dev/CI account (or a scoped org/collection)** holding only secrets meant
+for dev containers — *never your personal vault*. Your personal master password
+never lands on a Hetzner node.
+
+### Operator: one-time setup
+
+1. In the OrangeVault web UI, register a dedicated account (e.g. `dev-ci@…`), then
+   Settings → Security → API Key to get its `client_id` / `client_secret`.
+2. Store that account's creds in your fnox keychain (read by `prepare.nu` at
+   `dev:deploy`, injected into the container):
+   ```bash
+   fnox set --global -p keychain ORANGEVAULT_DEV_DOMAIN           # https://vault.<domain>
+   fnox set --global -p keychain ORANGEVAULT_DEV_EMAIL
+   fnox set --global -p keychain ORANGEVAULT_DEV_BW_CLIENTID
+   fnox set --global -p keychain ORANGEVAULT_DEV_BW_CLIENTSECRET
+   fnox set --global -p keychain ORANGEVAULT_DEV_MASTER_PASSWORD
+   ```
+3. `mise run dev:deploy` — the recipe injects these; the container's `ov-bootstrap`
+   runs `bw config/login/unlock` at start, so `fnox exec` resolves vault secrets.
+   (No creds set = the dev container still works, just without vault secrets.)
+
+### Developer: publish + consume
+
+Add the OrangeVault provider to your **project's** `fnox.toml` (copy
+[`templates/dev/fnox.orangevault.toml`](../templates/dev/fnox.orangevault.toml)),
+referencing the items you need:
+
+```toml
+[providers.orangevault]
+type = "bitwarden"
+[secrets]
+GH_TOKEN = { provider = "orangevault", value = "github-token/password" }
+```
+
+Publish the secret value into the **dev/CI** account once (from your Mac, with your
+bw/rbw pointed at OrangeVault, or `fnox set -p orangevault GH_TOKEN`). Then the loop
+just works — `uncloud:dev:*` runs the remote task under `fnox exec` automatically
+when a `fnox.toml` is present:
+
+```bash
+mise run uncloud:dev:release   # on the node: fnox exec -- mise run release, GH_TOKEN from OrangeVault
+```
+
+### How it's kept safe
+
+- **Dedicated account only** — never a personal vault; scope further with
+  `organization_id` / `collection` on the provider.
+- **Minimal disk footprint** — `ov-bootstrap` persists only the revocable, expiring
+  `BW_SESSION` (+ non-secret server/email) at `~/.config/ov/session` (`0600`); the
+  API key and master password stay in the PID 1 env, used once at unlock.
+- **Backend** — the image bakes `bw` (fnox's default). `rbw` is the repo's preferred
+  client (daemon-cached unlock, no Node) but is cargo-only; switch with
+  `backend = "rbw"` on the provider once it's baked.
+
+> **Verify on first deploy:** the image build (bw + fnox) and the live
+> `bw login --apikey` / `unlock` against OrangeVault haven't been exercised on a
+> real node yet — confirm `ov-bootstrap` succeeds (`mise run dev:ssh` → `ov-bootstrap`)
+> on the first `dev:deploy`.
+
 ## Operations (CI / Claude Code / headless)
 
 The loop is mise tasks, so an agent (or CI) drives it the same way a person does —
