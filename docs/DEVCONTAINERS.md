@@ -249,6 +249,14 @@ mise run uncloud:dev:release   # on the node: fnox exec -- mise run release, GH_
 > real node yet — confirm `ov-bootstrap` succeeds (`mise run dev:ssh` → `ov-bootstrap`)
 > on the first `dev:deploy`.
 
+> **Revisit when uncloud ships native secrets:** this whole in-container approach
+> (inject unlock creds → `ov-bootstrap` → `fnox exec`) exists because uncloud has no
+> secret injection yet. [PR #385 "feat: add secrets"](https://github.com/psviderski/uncloud/pull/385)
+> is adding it — once it lands we should resolve secrets **client-side** (fnox →
+> OrangeVault) and let uncloud inject only the resolved values as `/run/secrets`
+> files/env, dropping `ov-bootstrap`, the baked `bw`, and the dev/CI **unlock creds
+> on the node**. Tracked in [docs/upstream/compose-secrets.md](upstream/compose-secrets.md).
+
 ## Operations (CI / Claude Code / headless)
 
 The loop is mise tasks, so an agent (or CI) drives it the same way a person does —
