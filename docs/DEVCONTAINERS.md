@@ -196,20 +196,23 @@ never lands on a Hetzner node.
 
 ### Operator: one-time setup
 
-1. In the OrangeVault web UI, register a dedicated account (e.g. `dev-ci@…`), then
-   Settings → Security → API Key to get its `client_id` / `client_secret`.
-2. Store that account's creds in your fnox keychain (read by `prepare.nu` at
-   `dev:deploy`, injected into the container):
+The vault URL is already defaulted (`ORANGEVAULT_DEV_DOMAIN` in `mise.toml` → the
+running OrangeVault; override in `mise.local.toml` for your own instance), so setup
+is just the dedicated account:
+
+1. In the OrangeVault web UI, register a dedicated dev/CI account (e.g. `dev-ci@…`),
+   then Settings → Security → API Key for its `client_id` / `client_secret`.
+2. Seed the account creds, then verify everything:
    ```bash
-   fnox set --global -p keychain ORANGEVAULT_DEV_DOMAIN           # https://vault.<domain>
-   fnox set --global -p keychain ORANGEVAULT_DEV_EMAIL
-   fnox set --global -p keychain ORANGEVAULT_DEV_BW_CLIENTID
-   fnox set --global -p keychain ORANGEVAULT_DEV_BW_CLIENTSECRET
-   fnox set --global -p keychain ORANGEVAULT_DEV_MASTER_PASSWORD
+   mise run dev:secrets:set     # prompts for email, client_id, client_secret, master password
+   mise run dev:secrets:check   # confirms vault reachable + DOMAIN correct + creds set
    ```
 3. `mise run dev:deploy` — the recipe injects these; the container's `ov-bootstrap`
    runs `bw config/login/unlock` at start, so `fnox exec` resolves vault secrets.
    (No creds set = the dev container still works, just without vault secrets.)
+
+> The manual equivalent of step 2 is `fnox set --global -p keychain ORANGEVAULT_DEV_<EMAIL|BW_CLIENTID|BW_CLIENTSECRET|MASTER_PASSWORD>`
+> (and `ORANGEVAULT_DEV_DOMAIN` only if your vault isn't the default URL).
 
 ### Developer: publish + consume
 

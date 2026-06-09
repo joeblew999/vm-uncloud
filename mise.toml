@@ -54,6 +54,12 @@ VULTR_SSH_KEY_ID = ""
 # `mise run r2:bootstrap`; R2_ACCESS_KEY_ID/SECRET live in the keychain.
 R2_ENDPOINT = ""
 R2_BUCKET   = ""
+
+# OrangeVault (dev-container secrets). The LIVE vault URL — public, non-secret, so
+# it's defaulted here for zero-config; override in mise.local.toml for your own
+# instance. The dev/CI ACCOUNT creds (email / API key / master password) are secret
+# and live in the keychain — set them with `mise run dev:secrets:set`.
+ORANGEVAULT_DEV_DOMAIN = "https://orangevault.gedw99.workers.dev"
 # SSH keys are NOT set here — they live once in tofu/terraform.tfvars
 # (ssh_key_name + ssh_private_key_file) and flow to the scripts via tofu output.
 
@@ -291,6 +297,22 @@ run = "fnox exec --if-missing ignore -- nu scripts/recipe.nu dev-windows --conte
 # (win:snapshot/win:down) on a win-batch node instead of a dev-win node.
 description = "Destroy the Windows dev node (auto-confirmed; guest state is NOT snapshotted)."
 run = "fnox exec --if-missing ignore -- nu scripts/down.nu --context dev-win --yes"
+
+# dev:secrets — wire the dev containers to OrangeVault (the running Bitwarden-compat
+# vault). The vault URL defaults from $ORANGEVAULT_DEV_DOMAIN; only the dedicated
+# dev/CI ACCOUNT creds need setting. See docs/DEVCONTAINERS.md "Secrets via OrangeVault".
+[tasks."dev:secrets:set"]
+description = "Seed the dedicated dev/CI OrangeVault account creds in the keychain (skips keys already set)."
+run = """
+echo "Dedicated dev/CI OrangeVault account — NEVER your personal vault. Skips keys already set."
+for k in ORANGEVAULT_DEV_EMAIL ORANGEVAULT_DEV_BW_CLIENTID ORANGEVAULT_DEV_BW_CLIENTSECRET ORANGEVAULT_DEV_MASTER_PASSWORD; do
+  fnox get "$k" >/dev/null 2>&1 && echo "$k: already set" || fnox set --global -p keychain "$k"
+done
+"""
+
+[tasks."dev:secrets:check"]
+description = "Doctor: verify OrangeVault is reachable, its DOMAIN is correct, and the dev/CI creds are set."
+run = "nu scripts/dev-secrets-check.nu"
 
 # ── r2 (Cloudflare R2 — snapshot transit bucket for win-kvm) ────────────────
 [tasks."r2:bootstrap"]

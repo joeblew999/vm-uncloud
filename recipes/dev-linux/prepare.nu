@@ -52,15 +52,19 @@ def main [] {
   #   fnox set --global -p keychain ORANGEVAULT_DEV_MASTER_PASSWORD
   # CI / dry runs don't touch the keychain.
   let dry = (($env.VMU_SECRET_DRY? | default "") == "1")
-  let ov_server = (if $dry { "" } else { kc "ORANGEVAULT_DEV_DOMAIN" })
+  # Server URL: zero-config default from $ORANGEVAULT_DEV_DOMAIN (mise [env] =
+  # the live vault); keychain fallback. Account creds are keychain-only.
+  let ov_env = ($env.ORANGEVAULT_DEV_DOMAIN? | default "" | str trim)
+  let ov_server = (if ($ov_env | is-not-empty) { $ov_env } else if $dry { "" } else { kc "ORANGEVAULT_DEV_DOMAIN" })
   let ov_email  = (if $dry { "" } else { kc "ORANGEVAULT_DEV_EMAIL" })
   let ov_cid    = (if $dry { "" } else { kc "ORANGEVAULT_DEV_BW_CLIENTID" })
   let ov_csec   = (if $dry { "" } else { kc "ORANGEVAULT_DEV_BW_CLIENTSECRET" })
   let ov_pw     = (if $dry { "" } else { kc "ORANGEVAULT_DEV_MASTER_PASSWORD" })
 
-  if ($ov_server | is-empty) {
-    print -e "dev-linux: no dev OrangeVault account configured (ORANGEVAULT_DEV_* not in keychain)."
-    print -e "dev-linux: deploying WITHOUT vault secrets — `fnox exec` in-container won't resolve until set + redeploy."
+  # "Configured" hinges on the account creds, not the (defaulted) URL.
+  if (($ov_cid | is-empty) or ($ov_pw | is-empty)) {
+    print -e "dev-linux: no dev/CI OrangeVault account creds (ORANGEVAULT_DEV_* not in keychain)."
+    print -e "dev-linux: deploying WITHOUT vault secrets — set them with `mise run dev:secrets:set` + redeploy."
   } else {
     print -e $"dev-linux: vault secrets via OrangeVault \(($ov_server)\) — dev container will `fnox exec` against it."
   }
