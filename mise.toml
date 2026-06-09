@@ -267,8 +267,12 @@ description = "Describe the Linux dev node (state, type, IP)."
 run = "fnox exec --if-missing ignore -- hcloud server describe dev-1"
 
 [tasks."dev:down"]
-description = "Destroy the Linux dev node (workspace lives on your Mac — re-sync after dev:up)."
-run = "fnox exec --if-missing ignore -- nu scripts/down.nu --context dev"
+# Headless --yes (unlike the cluster/win teardown which prompts): a dev node is
+# reproducible — its only state (the synced repo) lives on the dev's Mac — so
+# operations / CI / Claude Code can tear it down non-interactively. Re-create
+# with dev:up + dev:deploy.
+description = "Destroy the Linux dev node (auto-confirmed; reproducible — re-sync after dev:up)."
+run = "fnox exec --if-missing ignore -- nu scripts/down.nu --context dev --yes"
 
 # dev-windows — a Windows dev desktop node (windows=true AND dev=true). RDP is
 # the primary entry; SSH/Remote-SSH into the guest is EXPERIMENTAL. Override
@@ -282,8 +286,11 @@ description = "Deploy the dev-windows recipe (dockur + oem provisioning) onto th
 run = "fnox exec --if-missing ignore -- nu scripts/recipe.nu dev-windows --context dev-win"
 
 [tasks."dev:down:win"]
-description = "Destroy the Windows dev node."
-run = "fnox exec --if-missing ignore -- nu scripts/down.nu --context dev-win"
+# Headless --yes too. NOTE: this destroys the Windows guest disk (no snapshot —
+# unlike win:down). If you need to preserve guest state, use the win:* flow
+# (win:snapshot/win:down) on a win-batch node instead of a dev-win node.
+description = "Destroy the Windows dev node (auto-confirmed; guest state is NOT snapshotted)."
+run = "fnox exec --if-missing ignore -- nu scripts/down.nu --context dev-win --yes"
 
 # ── r2 (Cloudflare R2 — snapshot transit bucket for win-kvm) ────────────────
 [tasks."r2:bootstrap"]

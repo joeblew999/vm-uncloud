@@ -85,7 +85,9 @@ mise run dev:down      # destroy when idle
 ```
 
 From a **project** repo, include the shared task lib (mise pulls just the one
-file, like `cliff.toml`) and drive the loop with your own build/test/release tasks:
+file, like `cliff.toml`) and drive the loop with your own build/test/release tasks.
+The shared tasks are namespaced `uncloud:dev:*` so they can't clash with the
+project's own tasks:
 
 ```toml
 [task_config]
@@ -93,9 +95,9 @@ includes = ["git::https://github.com/joeblew999/vm-uncloud.git//tasks/dev.toml?r
 ```
 
 ```bash
-mise run dev:build     # rsync the repo to the node + run its `mise run build` there
-mise run dev:release   # ...build + docker + GitHub release, on the node
-mise run dev:container # portable path: `devcontainer up` against the node's Docker
+mise run uncloud:dev:build     # rsync the repo to the node + run its `mise run build` there
+mise run uncloud:dev:release   # ...build + docker + GitHub release, on the node
+mise run uncloud:dev:container # portable path: `devcontainer up` against the node's Docker
 ```
 
 ## State

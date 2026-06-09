@@ -18,6 +18,32 @@ There are two recipes and two ways in:
 > Infrastructure recipes (caddy, imaginary, wordpress, moltis) are **not** dev
 > targets — they're services. Dev Containers is only `dev-linux` / `dev-windows`.
 
+## Add to any repo (TL;DR)
+
+Any repo with a `mise.toml` at its root opts in with **one include** — nothing to
+vendor (mise pulls just that file, like `cliff.toml`):
+
+```toml
+# <project>/mise.toml
+[task_config]
+includes = ["git::https://github.com/joeblew999/vm-uncloud.git//tasks/dev.toml?ref=<tag-or-branch>"]
+```
+
+```toml
+# <project>/mise.local.toml   (per developer, not committed)
+[env]
+DEV_HOST = "dev.amplifycms.com"   # the dev node — or its IP (mise run dev:ip)
+```
+
+Then `mise run uncloud:dev:build` (sync + the project's `build` on the node), or
+the assumption-free `mise run uncloud:dev:exec -- <any-task>`. Toolchains come from
+the project's own `mise.toml`, so this works for any language. The named wrappers
+(`uncloud:dev:build` / `…:test` / `…:release`) assume tasks called
+`build`/`test`/`release`; `uncloud:dev:exec -- <task>` makes no such assumption.
+The tasks are namespaced with **`uncloud:`** so they can't clash with the
+project's own tasks — the operator tasks below (`dev:up`/`dev:deploy`/…) are
+plain `dev:*` because they live only in the vm-uncloud repo, never included.
+
 ## Two paths to the same node
 
 1. **Recipe path (idiomatic).** The dev environment is the `dev-linux` recipe,
@@ -89,13 +115,13 @@ DEV_HOST = "dev.amplifycms.com"   # or the node IP from `mise run dev:ip`
 Then the loop:
 
 ```bash
-mise run dev:sync                 # rsync the repo to the node (honors .gitignore, keeps .git)
-mise run dev:exec -- build        # run THIS project's `mise run build` on the node
-mise run dev:build                # sync + build in one shot
-mise run dev:test                 # sync + test
-mise run dev:release              # sync + the project's release task (binary + docker + GitHub)
-mise run dev:code                 # open VS Code Remote-SSH at the synced repo
-mise run dev:shell                # interactive shell on the node, in the repo
+mise run uncloud:dev:sync             # rsync the repo to the node (honors .gitignore, keeps .git)
+mise run uncloud:dev:exec -- build    # run THIS project's `mise run build` on the node
+mise run uncloud:dev:build            # sync + build in one shot
+mise run uncloud:dev:test             # sync + test
+mise run uncloud:dev:release          # sync + the project's release task (binary + docker + GitHub)
+mise run uncloud:dev:code             # open VS Code Remote-SSH at the synced repo
+mise run uncloud:dev:shell            # interactive shell on the node, in the repo
 ```
 
 Toolchains are **not** baked into the image — the first `mise run` installs
@@ -118,7 +144,7 @@ your project's `.devcontainer/devcontainer.json` (or `mise generate devcontainer
 ```
 
 ```bash
-mise run dev:container            # DOCKER_HOST=ssh://root@$DEV_HOST devcontainer up
+mise run uncloud:dev:container    # DOCKER_HOST=ssh://root@$DEV_HOST devcontainer up
 ```
 
 The same `.devcontainer/` opens locally in VS Code's *Dev Containers* extension
@@ -149,6 +175,37 @@ before relying on it; until then RDP + the shared folder is the path.
 For native-speed Windows (TCG is ~10× slower) use the bare-metal `win-kvm` class.
 
 ---
+
+## Operations (CI / Claude Code / headless)
+
+The loop is mise tasks, so an agent (or CI) drives it the same way a person does —
+`mise tasks` to discover, `mise run …` to execute. What matters is which tasks are
+non-interactive:
+
+**Agent-safe (non-interactive):**
+operator (vm-uncloud repo) — `dev:up`, `dev:deploy`, `dev:ip`, `dev:status`,
+`dev:ssh:wait`, `dev:down`, `dev:down:win`; consumer (project repo) —
+`uncloud:dev:sync`, `uncloud:dev:exec -- <task>`, `uncloud:dev:build`,
+`uncloud:dev:test`, `uncloud:dev:release`. (`dev:up`/`dev:deploy` are headless —
+the uncloud fork dropped the PTY requirement; teardown is auto-confirmed, below.)
+
+**Human-only (an agent should skip):**
+operator — `dev:code` (VS Code Remote-SSH) / `dev:ssh` (interactive TTY);
+consumer — `uncloud:dev:code` / `uncloud:dev:shell`; and the Windows `win:rdp` /
+`win:viewer`.
+
+**Teardown is headless by design.** Unlike the cluster/win teardown (which prompts
+for the node name), `dev:down` / `dev:down:win` pass `--yes` — a dev node is
+reproducible (its only state, the synced repo, lives on the dev's Mac), so
+operations / CI / Claude Code can take it down non-interactively and re-create it
+with `dev:up` + `dev:deploy`. (`dev:down:win` does **not** snapshot the Windows
+guest — use the `win:*` flow if you need to preserve guest state.)
+
+**Secrets in a headless session.** Operator tasks (`dev:up`/`dev:deploy`/`dev:down`)
+need `HCLOUD_TOKEN` + `CLOUDFLARE_API_TOKEN` — from the `fnox` keychain locally, or
+the plain env vars in CI/cloud (where there's no keychain). The project loop
+(`uncloud:dev:sync`/`uncloud:dev:exec`/…) only needs `DEV_HOST` set and an SSH key the agent can
+read (`DEV_SSH_KEY`, or a default `~/.ssh` key).
 
 ## Security notes
 
