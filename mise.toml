@@ -22,10 +22,9 @@ hcloud   = "1.65.0"
 # secrets). Pinned so `mise install` provides it automatically; same version the
 # orangevault repo uses. Without this it had to be installed out-of-band.
 "github:jdx/fnox" = "1.24"
-# NOTE: nushell is NOT pinned here — `mise run ci` uses whatever `nu` is present.
-# The scripts need nushell >= 0.109 (connect/rdp-wait.nu uses `job spawn
-# --description`; older `nu` fails the CI parse). Consider pinning it, e.g.
-# `"aqua:nushell/nushell" = "0.109.0"`. See docs/toolchain-nushell.md.
+# nushell — pinned so `mise install` provides the `nu` every script + the CI parse
+# checks run on (gui/serve.nu, connect/*, scripts/*, recipe prepare.nu).
+"aqua:nushell/nushell" = "0.111.0"
 # Web GUI control plane (gui/server/serve.nu): http-nu serves it, xs is the
 # event bus, pitchfork supervises both as daemons. joeblew999 forks add iroh
 # relay support (FS sync across clones).

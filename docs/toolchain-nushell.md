@@ -1,42 +1,27 @@
-# Note: nushell version (toolchain) — pin it if `mise run ci` parse fails
+# Note: nushell is pinned (and the `job spawn` flag fixed)
 
-**Status:** latent, not currently blocking CI. Captured during the Dev Containers
-work so it can be fixed deliberately later.
+**Status: resolved.**
 
-## What's going on
+## What happened
 
-nushell is **not pinned** in `mise.toml` `[tools]`. The repo's `nu` scripts use
-newer-nushell features, so they only parse on a recent enough nushell:
+`mise run ci` parses every `nu` script. One file failed —
+`connect/rdp-wait.nu` used `job spawn --description "rdp-wait"`, but current
+nushell's flag is **`--tag`** (`--description` isn't a thing on `job spawn`). So it
+failed the CI parse on *any* recent `nu`, not just an old one — it was a renamed
+flag, not a version-too-old problem. Compounding it, nushell wasn't pinned in
+`mise.toml`, so `mise install` didn't provide a known `nu` at all.
 
-- `connect/rdp-wait.nu` uses `job spawn --description` / `job send` / `job recv`
-  (the experimental `job` subsystem) — **needs nushell ≥ 0.109** (0.108 fails).
-- Several scripts use `get -o` (the `--optional` short flag), also recent.
+## The fixes
 
-Because there's no pin, `mise run ci` uses whatever `nu` the environment provides:
-- CI (`jdx/mise-action`) and an up-to-date Mac → fine, `nu` is new enough.
-- An older `nu` (e.g. a fetched 0.108) → `mise run ci` reports a single parse
-  failure on `connect/rdp-wait.nu` ("`job spawn` doesn't have flag `description`").
-  This is a **toolchain-version mismatch, not a code bug** — the file is correct
-  on a current nushell.
+1. `connect/rdp-wait.nu`: `job spawn --description` → `job spawn --tag` (same
+   meaning — a cosmetic job label).
+2. `mise.toml [tools]`: pin `"aqua:nushell/nushell" = "0.111.0"` so `mise install`
+   provides the `nu` the scripts + CI parse run on.
 
-## The fix (when you want to do it)
+Verified: with nushell 0.111.0 + the flag fix, `mise run ci` passes (`✓ CI passed`).
 
-Pin nushell in `mise.toml` `[tools]` to a known-good version so `mise install`
-gives everyone the same `nu` and CI is reproducible. Note the registry short name
-is ambiguous (`nu` also matches numbat/nuclei/nuclio) — use the explicit backend:
+## If you bump nushell later
 
-```toml
-[tools]
-# ... existing tools ...
-"aqua:nushell/nushell" = "0.109.0"   # or the current stable; must be >= 0.109
-```
-
-Verify with `mise install` then `mise run ci`. Pick the latest stable unless a
-later nushell breaks one of the scripts.
-
-### Alternative
-
-If you'd rather not depend on the experimental `job` API, refactor
-`connect/rdp-wait.nu` to a plain `loop { sleep ...; if (port-open) { break } }`
-(like `connect/ssh-wait.nu` already does) — then the scripts parse on older
-nushell too and pinning is less critical.
+`nu`'s `job` subsystem is experimental and flags can churn. If a future bump
+breaks the CI parse again, check the changed command's `help` (e.g. `help job
+spawn`) for renamed flags rather than assuming the version is too old.
