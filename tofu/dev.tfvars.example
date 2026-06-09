@@ -1,0 +1,36 @@
+# dev — a dedicated, teardownable remote DEV node (Hetzner Cloud, Linux). Copy
+# to dev.tfvars and run it in its OWN context/workspace so its lifecycle is
+# independent of the live cluster:
+#
+#   mise run dev:up                          # provision the Linux dev node
+#   mise run dev:deploy                      # deploy the dev-linux recipe (mise + sshd)
+#   mise run dev:ssh:wait                    # wait until the dev container accepts SSH
+#   mise run dev:code                        # open VS Code Remote-SSH at /workspace
+#   # ...build/test there; from a PROJECT repo: mise run dev:build (tasks/dev.toml)
+#   mise run dev:down                        # destroy the node when idle
+#
+# Same domain/zone/ssh as the cluster — only the node class differs. Sized for
+# real compiles (Rust): pick a node with enough cores/RAM. cpx42 = 8/16 (~€28/mo
+# while up); cpx32 = 4/8 is fine for lighter builds. Match the DEPLOY target arch
+# so binaries you build run on the cluster: cpx* = x86 (linux/amd64); use a cax*
+# ARM type only if you deploy to ARM nodes.
+
+cloudflare_zone_id = "d24de2d0e3a152395432f6767c4c472e"  # amplifycms.com
+domain             = "amplifycms.com"
+dns_apex           = false
+
+cluster_name = "dev"              # names the server (dev-1) + firewall + uncloud context
+node_count   = 1
+server_type  = "cpx42"            # 8 vCPU / 16 GB — headroom for compiles; cpx32 for lighter use
+image        = "ubuntu-24.04"
+location     = "fsn1"
+
+dev          = true               # opens the dev SSH port, points dev.<domain> here, no wildcard
+dev_ssh_port = 2222               # host port the dev-linux recipe maps to the container's sshd
+
+ssh_key_name         = "gedw99_hetzner"
+ssh_private_key_file = "~/.ssh/gedw99_hetzner"
+
+# SSH (node :22) + the dev SSH port are restricted to this allowlist — TIGHTEN to
+# your IP, e.g. ssh_allowed_ips = ["203.0.113.4/32"]
+ssh_allowed_ips = ["0.0.0.0/0", "::/0"]

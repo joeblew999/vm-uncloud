@@ -1,0 +1,40 @@
+// Project devcontainer template — copy to your PROJECT repo as
+// .devcontainer/devcontainer.json (or run `mise generate devcontainer --write`
+// and merge). Drives the PORTABLE path: `mise run dev:container` points the Dev
+// Containers CLI at a vm-uncloud dev node's Docker so this builds on the remote;
+// the same file also works locally and in GitHub Codespaces. The IDIOMATIC path
+// (recipes/dev-linux + `mise run dev:build`) needs no devcontainer.json at all.
+//
+// Toolchains come from your mise.toml — the mise feature installs them on create.
+{
+  "name": "${localWorkspaceFolderBasename}",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+  "features": {
+    "ghcr.io/devcontainers-extra/features/mise:1": {},
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "hverlin.mise-vscode",
+        "rust-lang.rust-analyzer"
+      ]
+    }
+  },
+  "mounts": [
+    {
+      "source": "${localWorkspaceFolderBasename}-mise",
+      "target": "/mnt/mise-data",
+      "type": "volume"
+    }
+  ],
+  "containerEnv": {
+    "MISE_DATA_DIR": "/mnt/mise-data"
+  },
+  "remoteEnv": {
+    "PATH": "${containerEnv:PATH}:/mnt/mise-data/shims"
+  },
+  "onCreateCommand": "mise trust",
+  "postCreateCommand": "sudo chown -R vscode:vscode /mnt/mise-data && mise install"
+}

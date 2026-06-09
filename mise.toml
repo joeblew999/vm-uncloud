@@ -225,6 +225,62 @@ run = "fnox exec --if-missing ignore -- nu scripts/vultr-snapshot.nu"
 description = "Destroy the win-kvm Vultr node. Run win-kvm:snapshot FIRST to preserve state (not automatic)."
 run = "fnox exec --if-missing ignore -- nu scripts/vultr-down.nu"
 
+# ---------------------------------------------------------------------------
+# dev — remote DEV nodes (dev-linux / dev-windows recipes). A developer keeps
+# their repo on their Mac and compiles/tests on a real remote box that matches
+# the deploy target. Same idiom as win:* — a teardownable node class in its own
+# context (tofu/dev.tfvars, tofu/dev-win.tfvars). Toolchains come from each
+# PROJECT's mise.toml; the project drives the loop via the shared tasks/dev.toml.
+# See docs/DEVCONTAINERS.md.
+#   mise run dev:up → dev:deploy → dev:ssh:wait → dev:code → ... → dev:down
+# ---------------------------------------------------------------------------
+[tasks."dev:up"]
+description = "Provision the dedicated Linux dev node (dev context)."
+run = "fnox exec --if-missing ignore -- nu scripts/up.nu --context dev"
+
+[tasks."dev:deploy"]
+description = "Build + deploy the dev-linux recipe (mise + sshd) onto the dev node."
+run = "fnox exec --if-missing ignore -- nu scripts/recipe.nu dev-linux --context dev"
+
+[tasks."dev:ip"]
+description = "Public IPv4 of the Linux dev node."
+run = "fnox exec --if-missing ignore -- hcloud server ip dev-1"
+
+[tasks."dev:ssh:wait"]
+description = "Block until the dev container accepts SSH on its published port."
+run = "nu connect/ssh-wait.nu"
+
+[tasks."dev:ssh"]
+description = "Open an interactive SSH session into the dev container (terminal entry)."
+run = "nu connect/ssh-open.nu"
+
+[tasks."dev:code"]
+description = "Open VS Code Remote-SSH into the dev container at /workspace."
+run = "nu connect/code-open.nu"
+
+[tasks."dev:status"]
+description = "Describe the Linux dev node (state, type, IP)."
+run = "fnox exec --if-missing ignore -- hcloud server describe dev-1"
+
+[tasks."dev:down"]
+description = "Destroy the Linux dev node (workspace lives on your Mac — re-sync after dev:up)."
+run = "fnox exec --if-missing ignore -- nu scripts/down.nu --context dev"
+
+# dev-windows — a Windows dev desktop node (windows=true AND dev=true). RDP is
+# the primary entry; SSH/Remote-SSH into the guest is EXPERIMENTAL. Override
+# DEV_NODE=dev-win-1 / DEV_USER=Docker for the connect helpers against it.
+[tasks."dev:up:win"]
+description = "Provision the Windows dev node (dev-win context)."
+run = "fnox exec --if-missing ignore -- nu scripts/up.nu --context dev-win"
+
+[tasks."dev:deploy:win"]
+description = "Deploy the dev-windows recipe (dockur + oem provisioning) onto the dev-win node."
+run = "fnox exec --if-missing ignore -- nu scripts/recipe.nu dev-windows --context dev-win"
+
+[tasks."dev:down:win"]
+description = "Destroy the Windows dev node."
+run = "fnox exec --if-missing ignore -- nu scripts/down.nu --context dev-win"
+
 # ── r2 (Cloudflare R2 — snapshot transit bucket for win-kvm) ────────────────
 [tasks."r2:bootstrap"]
 description = "Guided one-time R2 bucket + token setup for the win-kvm snapshot pipeline."
