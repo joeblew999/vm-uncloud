@@ -260,6 +260,25 @@ mise run uncloud:dev:release   # on the node: fnox exec -- mise run release, GH_
 > files/env, dropping `ov-bootstrap`, the baked `bw`, and the dev/CI **unlock creds
 > on the node**. Tracked in [docs/upstream/compose-secrets.md](upstream/compose-secrets.md).
 
+### Public-ish tokens via Send (no vault auth) — future `send:get`
+
+For a *low-sensitivity, rotatable* value (e.g. a fine-grained **read-only**
+`GITHUB_TOKEN` to dodge GitHub rate limits in CI / Claude-web sessions), OrangeVault
+also supports Bitwarden **Sends** — an encrypted, expiring, access-capped share
+reachable by a **capability URL with no account/login** (OrangeVault implements the
+anonymous `POST /api/sends/access/:id`). A session fetches it with just the Send URL
+— no bootstrap creds, no `ov-bootstrap`. This pairs with the
+[SessionStart hook](../.claude/hooks/session-start.sh): deliver the token via a Send
+URL rather than the vault.
+
+**Status: documented, not yet coded.** Receiving a Send means implementing
+Bitwarden's zero-knowledge decryption (key in the URL fragment; HKDF + AES-CBC +
+HMAC), and `bw`/`rbw`/fnox only *create* or *read vault items* — they don't receive
+Sends. So a `send:get` helper should be written and verified **against a live Send**,
+not shipped blind. Caveat: the Send URL is itself a (revocable, expiring) bearer
+secret — fine for a scoped read-only token, never for sensitive values (those stay
+in the authenticated vault).
+
 ## Operations (CI / Claude Code / headless)
 
 The loop is mise tasks, so an agent (or CI) drives it the same way a person does —

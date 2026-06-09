@@ -333,6 +333,17 @@ run = "nu scripts/registry.nu publish"
 description = "Remove a registered system: mise run registry:remove -- --context cluster --service moltis"
 run = "nu scripts/registry.nu remove"
 
+# ov-admin — thin ConnectRPC client for orangevault-admin (JSON over HTTP; no
+# binary). Needs ORANGEVAULT_ADMIN_DOMAIN (+ _TOKEN for non-healthz). The admin
+# worker's auth is WIP — verify-on-first-use. See docs/orangevault-admin.md.
+[tasks."ov-admin:healthz"]
+description = "Ping orangevault-admin (ConnectRPC Healthz)."
+run = "nu scripts/ov-admin.nu healthz"
+
+[tasks."ov-admin:list-users"]
+description = "List users via orangevault-admin (needs ORANGEVAULT_ADMIN_TOKEN)."
+run = "nu scripts/ov-admin.nu list-users"
+
 # ── r2 (Cloudflare R2 — snapshot transit bucket for win-kvm) ────────────────
 [tasks."r2:bootstrap"]
 description = "Guided one-time R2 bucket + token setup for the win-kvm snapshot pipeline."

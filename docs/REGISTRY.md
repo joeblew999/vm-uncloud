@@ -26,6 +26,24 @@ type = "bitwarden"
 MOLTIS_URL = { provider = "orangevault", value = "vmu/hetzner/moltis/uri" }
 ```
 
+## Two layers: Cloudflare DNS + OrangeVault
+
+vm-uncloud already manages **Cloudflare DNS** (tofu creates `*.<domain>`,
+`dev.<domain>`, `windows.<domain>`), so discovery is naturally two complementary
+layers — no new infrastructure:
+
+- **DNS = the address layer.** A service published on `<service>.<domain>` already
+  *resolves* (wildcard A record) and is routed by Caddy. So the URL is
+  deterministic from the recipe's host — public, zero-auth, already there.
+- **OrangeVault = the catalog + secrets layer.** It records *which* services exist,
+  their metadata (`kind`, `updated`), any non-public endpoints, and the secrets to
+  use them — queryable by name via fnox, gated by the dedicated account.
+
+So the registry entry's `uri` is simply the DNS name vm-uncloud already created;
+OrangeVault adds the queryable catalog and the auth/secrets that DNS can't. A
+consumer resolves the address from either (DNS for public, OrangeVault for the
+catalog/private bits).
+
 ## Enabling it
 
 Writing uses the `bw` CLI against the **dedicated dev/CI account** (same creds as
