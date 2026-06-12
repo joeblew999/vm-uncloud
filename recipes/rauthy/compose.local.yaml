@@ -1,0 +1,29 @@
+# Local-only overlay for the rauthy recipe — applied ON TOP of compose.yaml when
+# you run `mise run recipe:local rauthy`. The base compose.yaml stays the single
+# source of truth for the service (image, init pattern, volumes, mandatory env);
+# this file only carries the deltas that differ between "behind Caddy on the
+# cluster" and "plain docker on your laptop":
+#
+#   - publish a host port (the cluster uses x-ports/Caddy; local needs a real port)
+#   - PROXY_MODE off + localhost hostnames (no reverse proxy in front locally)
+#   - a KNOWN dev admin password (so you can actually log in; the remote path
+#     uses a random persisted one)
+#
+# Local data is ephemeral dev state. Reset with `mise run recipe:local rauthy --down`.
+services:
+  rauthy:
+    ports:
+      - "8080:8080"
+    environment:
+      # No reverse proxy locally → talk straight to Rauthy over http on localhost.
+      PROXY_MODE: "false"
+      PUB_URL: localhost:8080
+      LISTEN_SCHEME: http
+      # WebAuthn relying party = localhost for a laptop instance.
+      RP_ID: localhost
+      RP_ORIGIN: http://localhost:8080
+      # Known dev credentials (admin@localhost). Overrides the random ${RAUTHY_ADMIN_PASSWORD}
+      # the base compose injects from prepare.nu — so local login is reproducible.
+      # DEV ONLY: never reuse this shape on the cluster.
+      BOOTSTRAP_ADMIN_EMAIL: admin@localhost
+      BOOTSTRAP_ADMIN_PASSWORD_PLAIN: LocalDevAdminPassword123456

@@ -1,0 +1,9 @@
+# Local-only overlay for the imaginary recipe — applied by `mise run recipe:local
+# imaginary`. The cluster routes via Caddy/x-ports; locally there's no proxy, so
+# we just publish the container port on the host. Everything else (image,
+# command, the prepare.nu-generated API key) is the SAME as the remote path.
+#   → http://localhost:9000  (health: /health)
+services:
+  imaginary:
+    ports:
+      - "9000:9000"

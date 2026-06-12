@@ -1,0 +1,102 @@
+# Rauthy — OpenID Connect provider / SSO (Rust, single binary). OIDC discovery
+# at https://id.<your-domain>/auth/v1/.well-known/openid-configuration. This
+# is the AuthN plane: it issues JWTs that edge Workers (cf-connectrpc-middleware
+# / connectrpc-oidc) validate against the JWKS endpoint. Cedar (AuthZ) is not here.
+#
+#   mise run recipe rauthy
+#
+# Config VERIFIED 2026-06-12 by booting ghcr.io/sebadob/rauthy:0.35.2 locally
+# (orbstack) with this exact env: it bootstraps the admin and serves OIDC
+# discovery + JWKS (issuer .../auth/v1/, 4 signing keys RS256/384/512+EdDSA).
+# Caddy fronts Rauthy and terminates TLS; Rauthy listens plain HTTP behind it
+# (proxy_mode), like the Moltis recipe.
+#
+# TWO non-obvious requirements found by booting it (it crash-loops without them):
+#   1. The image is DISTROLESS and PANICS if /app/config.toml is absent — env
+#      vars only *override* that file, they don't replace it. uncloud can't
+#      bind-mount a host file, so the `rauthy-init` service seeds an empty one
+#      into a shared volume and rauthy reads it via `serve -c /cfg/config.toml`.
+#   2. webauthn.rp_id is mandatory → RP_ID / RP_ORIGIN / RP_NAME below.
+#
+# FIRST-BOOT ACCEPTANCE CHECK (do not skip): after `uc logs rauthy` shows it up,
+# confirm the issuer scheme is https (locally without a proxy it correctly came
+# out http — behind Caddy it must be https via X-Forwarded-Proto, or the Worker's
+# JWT `iss` validation fails). The Worker must expect iss = https://id.<domain>/auth/v1/
+# (note the /auth/v1/ PATH suffix) and jwks_uri = https://id.<domain>/auth/v1/oidc/certs.
+#   curl -s https://id.<domain>/auth/v1/.well-known/openid-configuration | jq .issuer
+services:
+  # Seeds an empty config.toml into the shared `cfg` volume before rauthy starts.
+  # Rauthy panics without the file; env overrides supply every value, so empty
+  # is sufficient. Runs once and exits; rauthy waits for it via depends_on.
+  rauthy-init:
+    image: busybox:latest
+    command: ["sh", "-c", "printf '# rauthy: all values supplied via env overrides\\n' > /cfg/config.toml"]
+    volumes:
+      - cfg:/cfg
+
+  rauthy:
+    # Pinned (not :latest) for reproducible boots — bump deliberately.
+    image: ghcr.io/sebadob/rauthy:0.35.2
+    # Read the seeded config from the shared volume (entrypoint is /app/rauthy).
+    command: ["serve", "-c", "/cfg/config.toml"]
+    depends_on:
+      # Best case: uncloud honors the completed-condition and rauthy starts only
+      # after the file exists. If uncloud ignores it, rauthy crash-loops once and
+      # self-heals on restart (the file persists in `cfg`) — still converges.
+      rauthy-init:
+        condition: service_completed_successfully
+    environment:
+      # ── Public URL / proxy ────────────────────────────────────────────────
+      # PUB_URL is host[:port] only (NO scheme prefix). Standard 443 → no port.
+      PUB_URL: id.${DOMAIN}
+      # Rauthy binds plain HTTP; Caddy terminates TLS in front. (config.toml
+      # default is http_https — must be narrowed to http behind a TLS proxy.)
+      LISTEN_SCHEME: http
+      LISTEN_ADDRESS: 0.0.0.0
+      LISTEN_PORT_HTTP: "8080"
+      PROXY_MODE: "true"
+      # MANDATORY when PROXY_MODE=true (Rauthy refuses to start otherwise):
+      # the CIDRs it will trust X-Forwarded-For/Proto from. These cover the
+      # uncloud overlay + docker bridges where Caddy reaches Rauthy. Newline-
+      # separated list (uncloud's trailing \n on injected values is harmless).
+      TRUSTED_PROXIES: |
+        10.0.0.0/8
+        172.16.0.0/12
+        192.168.0.0/16
+      # ── WebAuthn / passkeys (MANDATORY — webauthn.rp_id) ──────────────────
+      # RP_ID = the public host users see; RP_ORIGIN = its https origin. These
+      # gate passkey registration to this domain. Found by boot: missing rp_id
+      # panics on startup.
+      RP_ID: id.${DOMAIN}
+      RP_ORIGIN: https://id.${DOMAIN}
+      RP_NAME: amplifycms
+      # ── Persistence (embedded Hiqlite/SQLite) ─────────────────────────────
+      HIQLITE: "true"
+      # Default node_id 0 is invalid; HQL_NODES default already references "1".
+      HQL_NODE_ID: "1"
+      # No defaults — Rauthy won't start without these two. Persisted secrets.
+      HQL_SECRET_RAFT: ${HQL_SECRET_RAFT}
+      HQL_SECRET_API: ${HQL_SECRET_API}
+      # ── Encryption at rest ────────────────────────────────────────────────
+      # MANDATORY: "at least one valid encryption key". Format is <keyId>/<b64-
+      # 32-byte-key>; ENC_KEY_ACTIVE names the id used for new encryptions.
+      # Persisted (secret-b64) — rotating this orphans all encrypted data.
+      ENC_KEYS: ${ENC_KEYS}
+      ENC_KEY_ACTIVE: ${ENC_KEY_ACTIVE}
+      # ── Bootstrap admin ───────────────────────────────────────────────────
+      # First-boot only. ARGON2ID variant would take priority if also set.
+      # Rotate via the admin UI after first login.
+      BOOTSTRAP_ADMIN_EMAIL: ${RAUTHY_ADMIN_EMAIL}
+      BOOTSTRAP_ADMIN_PASSWORD_PLAIN: ${RAUTHY_ADMIN_PASSWORD}
+    volumes:
+      - cfg:/cfg
+      # Hiqlite DB + Raft state live here. Persist it: wiping = fresh DB AND the
+      # admin/keys re-bootstrap. (ENC_KEYS/HQL secrets are injected, so they
+      # survive a volume wipe — but the DATA they protect does not.)
+      - rauthy_data:/app/data
+    x-ports:
+      - id.${DOMAIN}:8080/https
+
+volumes:
+  cfg:
+  rauthy_data:
