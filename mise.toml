@@ -487,3 +487,10 @@ run = "fnox exec --if-missing ignore -- nu scripts/arm.nu release"
 [tasks."arm:release-all"]
 description = "Delete ALL secured cax boxes (arm-reserve-*)."
 run = "fnox exec --if-missing ignore -- nu scripts/arm.nu release-all"
+
+# Deploy the whole Rauthy+Cedar stack across its repos (Hetzner + Cloudflare).
+# DRY by default — prints the ordered plan; --execute spends + ships. Map lives
+# in deploy-stack.nuon.
+[tasks."deploy:stack"]
+description = "Deploy the Rauthy+Cedar stack (DRY by default; -- --execute to ship)"
+run = "fnox exec --if-missing ignore -- nu scripts/deploy-stack.nu"

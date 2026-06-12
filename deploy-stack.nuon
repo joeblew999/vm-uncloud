@@ -1,0 +1,40 @@
+# THE MAP — what deploys where for the Rauthy + Cedar stack. Edit this, not the
+# orchestrator (scripts/deploy-stack.nu). This file is the answer to "what uses
+# what": every deploy target, its repo, its command, and the shared values.
+{
+  domain: "amplifycms.com"
+
+  # The ONE cross-repo secret = the contract (fnox keychain item name). The
+  # rauthy recipe puts it in the bridge webhook as `?key=`; saasmail reads it as
+  # RAUTHY_WEBHOOK_SECRET. Generated once, stable, single source of truth.
+  shared_secret_item: "VMU_RAUTHY_WEBHOOK_SECRET"
+
+  # PHASE 1 — server plane (Hetzner, this repo). Brings up Rauthy + the email
+  # bridge. The recipe's prepare.nu reads the shared secret for the webhook.
+  server: { recipe: "rauthy" }
+
+  # PHASE 3 — edge plane (Cloudflare). Each repo OWNS its own deploy; the
+  # orchestrator just invokes it with the shared config/secrets. Paths are
+  # relative to this repo (siblings under .../joeblew999/).
+  edge: [
+    {
+      name: "cedar-worker"
+      path: "../cf-connectrpc-middleware/examples/rauthy-cedar/worker"
+      deploy: "wrangler deploy"
+      # Derived purely from the domain — no secret needed (the Worker only
+      # VERIFIES tokens against JWKS).
+      vars: {
+        RAUTHY_ISSUER: "https://id.amplifycms.com/auth/v1/"
+        RAUTHY_JWKS_URL: "https://id.amplifycms.com/auth/v1/oidc/certs"
+        RAUTHY_AUD: "worker-client"
+      }
+    }
+    {
+      name: "saasmail"
+      path: "../saasmail"
+      deploy: "yarn deploy"
+      # Pushed via `wrangler secret put` from the shared fnox item above.
+      wrangler_secrets: ["RAUTHY_WEBHOOK_SECRET"]
+    }
+  ]
+}
