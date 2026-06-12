@@ -25,4 +25,12 @@
   roles: ["superuser"]
   # Groups available for assignment.
   groups: ["eng"]
+  # Email → Cloudflare. Rauthy's transactional mail (verification, password
+  # reset, …) goes SMTP → the `bridge` service → this webhook (your CF email
+  # worker's inbound endpoint), which sends via Cloudflare Email. Leave webhook
+  # empty to disable email.
+  email: {
+    webhook: "https://mail.amplifycms.com/api/rauthy-inbound"
+    from: "Rauthy <noreply@amplifycms.com>"
+  }
 }

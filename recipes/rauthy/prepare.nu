@@ -56,6 +56,10 @@ def main [] {
   mut clients_json = ""
   mut roles_json = ""
   mut groups_json = ""
+  # Email defaults (overridden by bootstrap.nuon's `email` block). The webhook
+  # placeholder is a no-op target so smtp2http still starts when email is unset.
+  mut email_webhook = "http://localhost:9/disabled"
+  mut smtp_from = $"Rauthy <noreply@($dom)>"
   if ($bs_file | path exists) {
     let bs = (open $bs_file)
     let built = ($bs.clients? | default [] | each {|c| build-client $c })
@@ -67,6 +71,8 @@ def main [] {
     if ($roles | is-not-empty) { $roles_json = ($roles | to json -r) }
     let groups = ($bs.groups? | default [] | each {|g| { name: $g }})
     if ($groups | is-not-empty) { $groups_json = ($groups | to json -r) }
+    if (($bs.email?.webhook? | default "") != "") { $email_webhook = $bs.email.webhook }
+    if (($bs.email?.from? | default "") != "") { $smtp_from = $bs.email.from }
   }
 
   print -e $"rauthy: admin login at https://id.($dom) — first-boot password is the persisted BOOTSTRAP value below \(or 'uc logs rauthy' on the very first start\)"
@@ -83,6 +89,8 @@ def main [] {
     HQL_SECRET_API: (secret "VMU_RAUTHY_HQL_API" 48),
     BOOTSTRAP_CLIENTS: $clients_json,
     BOOTSTRAP_ROLES: $roles_json,
-    BOOTSTRAP_GROUPS: $groups_json
+    BOOTSTRAP_GROUPS: $groups_json,
+    RAUTHY_EMAIL_WEBHOOK: $email_webhook,
+    RAUTHY_SMTP_FROM: $smtp_from
   } | to json
 }

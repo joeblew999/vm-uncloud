@@ -51,6 +51,35 @@ shared `cfg` volume's `BOOTSTRAP_DIR` → Rauthy imports on first boot.
 - `client_credentials` tokens have `sub: null` → use the **password grant** for a
   user token carrying `sub` + roles.
 
+## Email → Cloudflare (Rauthy stays stock)
+
+Rauthy sends transactional mail (verification, password reset, …) over SMTP;
+Cloudflare sends via HTTP. The recipe bridges them WITHOUT touching Rauthy:
+
+```
+Rauthy ──SMTP──► bridge (smtp2http) ──POST──► saasmail /api/rauthy-inbound ──► CF Email
+(SMTP_URL=bridge)  internal net only         (the CF-send code, in the email repo)
+```
+
+- **`bridge`** = `alash3al/smtp2http`, a tiny SMTP→webhook forwarder, a service in
+  this compose. Listens `:1025` on the internal network only (never exposed).
+  Rauthy points at it via `SMTP_URL=bridge` + `SMTP_DANGER_INSECURE=true` (plain,
+  internal). **Verified locally:** it forwards mail as `application/x-www-form-
+  urlencoded` (`addresses[from]`, `addresses[to]`, `subject`, `body[text]`,
+  `body[html]`).
+- **The webhook** = `bootstrap.nuon`'s `email.webhook` → your CF email worker's
+  inbound endpoint. The matching handler lives in **saasmail**
+  (`/api/rauthy-inbound`, branch `feat/rauthy-inbound`) — it parses that form and
+  sends via Cloudflare Email. Rauthy never changes; CF-send code stays in the
+  email repo.
+- **Auth:** smtp2http can't add headers, so put a shared secret in the webhook
+  URL as `?key=<secret>` (`email.webhook`) and set saasmail's
+  `RAUTHY_WEBHOOK_SECRET` to match.
+
+Not yet end-to-end live: triggering a real Rauthy email needs PoW (reset) or the
+admin API (create-user), and the CF send needs a domain onboarded at CF Email —
+both deploy-time. The bridge hop + the saasmail handler are individually verified.
+
 ## TODO
 
-See [TODO.md](TODO.md) — route Rauthy's transactional email through Cloudflare.
+See [TODO.md](TODO.md).

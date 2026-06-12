@@ -49,6 +49,16 @@ services:
     volumes:
       - cfg:/cfg
 
+  # Email bridge — Rauthy speaks SMTP, Cloudflare sends via HTTP. smtp2http is a
+  # tiny purpose-built SMTP→webhook forwarder (alash3al/smtp2http). It listens on
+  # the INTERNAL network only (never exposed); Rauthy reaches it as `bridge:1025`.
+  # It POSTs each outbound mail to RAUTHY_EMAIL_WEBHOOK — your Cloudflare email
+  # worker's inbound endpoint (e.g. saasmail /api/rauthy-inbound), which sends via
+  # CF Email. So Rauthy stays 100% stock; the CF-send code lives in the email repo.
+  bridge:
+    image: alash3al/smtp2http
+    command: ["--listen=:1025", "--webhook=${RAUTHY_EMAIL_WEBHOOK}"]
+
   rauthy:
     # Pinned (not :latest) for reproducible boots — bump deliberately.
     image: ghcr.io/sebadob/rauthy:0.35.2
@@ -88,6 +98,12 @@ services:
       RP_ID: id.${DOMAIN}
       RP_ORIGIN: https://id.${DOMAIN}
       RP_NAME: amplifycms
+      # ── Email → Cloudflare (via the `bridge` smtp2http service) ───────────
+      # DANGER_INSECURE: unencrypted + unauthenticated SMTP (fine — internal net
+      # only) AND it defaults SMTP_PORT to 1025, which is what `bridge` listens on.
+      SMTP_URL: bridge
+      SMTP_DANGER_INSECURE: "true"
+      SMTP_FROM: ${RAUTHY_SMTP_FROM}
       # ── Persistence (embedded Hiqlite/SQLite) ─────────────────────────────
       HIQLITE: "true"
       # Default node_id 0 is invalid; HQL_NODES default already references "1".
