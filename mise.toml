@@ -22,6 +22,9 @@ hcloud   = "1.65.0"
 # secrets). Pinned so `mise install` provides it automatically; same version the
 # orangevault repo uses. Without this it had to be installed out-of-band.
 "github:jdx/fnox" = "1.24"
+# orangevault-cli — auto-provisions the dedicated dev/CI OrangeVault account
+# (register + mint API key) for dev:secrets:set. Pure-Rust, multi-OS release.
+"github:joeblew999/orangevault" = "0.1.1"
 # nushell — pinned so `mise install` provides the `nu` every script + the CI parse
 # checks run on (gui/serve.nu, connect/*, scripts/*, recipe prepare.nu).
 "aqua:nushell/nushell" = "0.111.0"
@@ -116,6 +119,15 @@ run = "fnox exec --if-missing ignore -- nu scripts/caddy-external.nu"
 [tasks.recipe]
 description = "Deploy a named recipe from uncloud-recipes (e.g. wordpress-mariadb)"
 run = "fnox exec --if-missing ignore -- nu scripts/recipe.nu"
+
+# Run the SAME recipe locally via plain docker compose (DRY with `recipe` above —
+# shared compose.yaml + prepare.nu; local deltas in an optional compose.local.yaml).
+# Needs a local Docker daemon. No fnox: local uses throwaway secrets.
+#   mise run recipe:local rauthy          # up   → http://localhost:<port>
+#   mise run recipe:local rauthy --down   # reset
+[tasks."recipe:local"]
+description = "Run a recipe locally via docker compose (e.g. rauthy) — DRY with the remote `recipe` task"
+run = "nu scripts/recipe-local.nu"
 
 # ---------------------------------------------------------------------------
 # Hidden tasks — used by tooling/verification, not part of the day-to-day flow.
@@ -312,13 +324,45 @@ run = "fnox exec --if-missing ignore -- nu scripts/down.nu --context dev-win --y
 # vault). The vault URL defaults from $ORANGEVAULT_DEV_DOMAIN; only the dedicated
 # dev/CI ACCOUNT creds need setting. See docs/DEVCONTAINERS.md "Secrets via OrangeVault".
 [tasks."dev:secrets:set"]
-description = "Seed the dedicated dev/CI OrangeVault account creds in the keychain (skips keys already set)."
-run = """
-echo "Dedicated dev/CI OrangeVault account — NEVER your personal vault. Skips keys already set."
-for k in ORANGEVAULT_DEV_EMAIL ORANGEVAULT_DEV_BW_CLIENTID ORANGEVAULT_DEV_BW_CLIENTSECRET ORANGEVAULT_DEV_MASTER_PASSWORD; do
-  fnox get "$k" >/dev/null 2>&1 && echo "$k: already set" || fnox set --global -p keychain "$k"
-done
-"""
+description = "Auto-provision the dedicated dev/CI OrangeVault account via orangevault-cli (register + mint API key → keychain). Idempotent."
+shell = "nu -c"
+run = '''
+let server = ($env.ORANGEVAULT_DEV_DOMAIN? | default "https://orangevault.gedw99.workers.dev")
+print "Auto-provisioning the dedicated dev/CI OrangeVault account (NEVER your personal vault)."
+
+# Email — the one human choice (which identity). No mail is sent; any unique
+# address works. Prompt + store if not already in the keychain.
+mut email = (do { ^fnox get ORANGEVAULT_DEV_EMAIL } | complete | if $in.exit_code == 0 { $in.stdout | str trim } else { "" })
+if ($email | is-empty) {
+  $email = (input "dev/CI account email: " | str trim)
+  $email | ^fnox set --global -p keychain ORANGEVAULT_DEV_EMAIL
+}
+
+# Master password — generated + stored if missing (you never type it).
+mut pw = (do { ^fnox get ORANGEVAULT_DEV_MASTER_PASSWORD } | complete | if $in.exit_code == 0 { $in.stdout | str trim } else { "" })
+if ($pw | is-empty) {
+  $pw = (^openssl rand -base64 24 | str trim)
+  $pw | ^fnox set --global -p keychain ORANGEVAULT_DEV_MASTER_PASSWORD
+  print "  ✓ generated ORANGEVAULT_DEV_MASTER_PASSWORD"
+}
+
+$env.OV_SERVER = $server
+$env.OV_EMAIL = $email
+$env.OV_MASTER_PASSWORD = $pw
+
+# register is idempotent (an existing account just continues); then mint the key.
+let reg = (do { ^orangevault-cli register --name "vm-uncloud dev/CI" } | complete)
+if $reg.exit_code == 0 { print "  ✓ registered" } else { print "  • account already exists (continuing)" }
+
+let out = (^orangevault-cli get-apikey | lines)
+let cid = ($out | where {|l| $l | str starts-with "BW_CLIENTID=" } | first | str replace "BW_CLIENTID=" "")
+let csec = ($out | where {|l| $l | str starts-with "BW_CLIENTSECRET=" } | first | str replace "BW_CLIENTSECRET=" "")
+if ($cid | is-empty) or ($csec | is-empty) { print -e "✗ get-apikey returned no key"; exit 1 }
+$cid | ^fnox set --global -p keychain ORANGEVAULT_DEV_BW_CLIENTID
+$csec | ^fnox set --global -p keychain ORANGEVAULT_DEV_BW_CLIENTSECRET
+print "  ✓ stored ORANGEVAULT_DEV_BW_CLIENTID + ORANGEVAULT_DEV_BW_CLIENTSECRET"
+print "Next: mise run dev:secrets:check"
+'''
 
 [tasks."dev:secrets:check"]
 description = "Doctor: verify OrangeVault is reachable, its DOMAIN is correct, and the dev/CI creds are set."
@@ -443,3 +487,10 @@ run = "fnox exec --if-missing ignore -- nu scripts/arm.nu release"
 [tasks."arm:release-all"]
 description = "Delete ALL secured cax boxes (arm-reserve-*)."
 run = "fnox exec --if-missing ignore -- nu scripts/arm.nu release-all"
+
+# Deploy the whole Rauthy+Cedar stack across its repos (Hetzner + Cloudflare).
+# DRY by default — prints the ordered plan; --execute spends + ships. Map lives
+# in deploy-stack.nuon.
+[tasks."deploy:stack"]
+description = "Deploy the Rauthy+Cedar stack (DRY by default; -- --execute to ship)"
+run = "fnox exec --if-missing ignore -- nu scripts/deploy-stack.nu"

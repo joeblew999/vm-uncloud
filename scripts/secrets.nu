@@ -29,3 +29,21 @@ export def secret [name: string, length: int = 32] {
   do { $val | ^fnox set -c $CFG -p keychain $name } | complete | ignore
   $val
 }
+
+# Get-or-create a stable base64-encoded random key of `bytes` raw bytes.
+# `secret` only yields alphanumeric, but some configs need a real base64 key —
+# e.g. Rauthy's ENC_KEYS wants a base64-encoded 32-byte value. Same persistence
+# guarantee as `secret`: generated once, stable across redeploys (changing an
+# encryption key after data is written makes that data undecryptable).
+export def secret-b64 [name: string, bytes: int = 32] {
+  if (($env.VMU_SECRET_DRY? | default "") == "1") { return (^openssl rand -base64 $bytes | str trim) }
+  ensure-cfg
+  let got = (do { ^fnox get -c $CFG $name } | complete)
+  if ($got.exit_code == 0) {
+    let v = ($got.stdout | str trim)
+    if ($v != "") { return $v }
+  }
+  let val = (^openssl rand -base64 $bytes | str trim)
+  do { $val | ^fnox set -c $CFG -p keychain $name } | complete | ignore
+  $val
+}

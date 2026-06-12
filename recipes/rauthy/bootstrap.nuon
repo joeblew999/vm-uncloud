@@ -1,0 +1,36 @@
+# Declarative Rauthy bootstrap — the per-project AuthN config, the same way
+# Cedar policy files are the per-project AuthZ config. Edit this for your
+# project; prepare.nu turns it into Rauthy's bootstrap JSON and the recipe
+# seeds it on first boot.
+#
+# Secrets are NOT written here — prepare.nu GENERATES a stable 64-char secret
+# per client (persisted in the fnox keychain) and prints it, so you never
+# commit a secret and never hit Rauthy's exactly-64-char validation by hand.
+#
+# Delete this file (or empty the lists) to bootstrap nothing but the admin.
+{
+  # OIDC clients — one per app that authenticates against this Rauthy.
+  clients: [
+    {
+      id: "worker-client"
+      name: "ConnectRPC Worker"
+      # client_credentials = machine tokens; password = user tokens (sub+roles);
+      # authorization_code = browser login. Pick what the app uses.
+      flows: ["authorization_code", "client_credentials", "password"]
+      scopes: ["openid", "profile", "groups", "email"]
+      redirect_uris: ["https://id.amplifycms.com/auth/v1/oidc/callback"]
+    }
+  ]
+  # Roles available for assignment (admin already exists by default in Rauthy).
+  roles: ["superuser"]
+  # Groups available for assignment.
+  groups: ["eng"]
+  # Email → Cloudflare. Rauthy's transactional mail (verification, password
+  # reset, …) goes SMTP → the `bridge` service → this webhook (your CF email
+  # worker's inbound endpoint), which sends via Cloudflare Email. Leave webhook
+  # empty to disable email.
+  email: {
+    webhook: "https://mail.amplifycms.com/api/rauthy-inbound"
+    from: "Rauthy <noreply@amplifycms.com>"
+  }
+}

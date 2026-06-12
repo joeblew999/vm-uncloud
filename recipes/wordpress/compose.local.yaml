@@ -1,0 +1,10 @@
+# Local-only overlay for the wordpress recipe — applied by `mise run recipe:local
+# wordpress`. Publishes WordPress on the host; mariadb stays internal (WordPress
+# reaches it by the compose service name `mariadb`, unchanged). Same images, same
+# prepare.nu-generated DB credentials as the remote path — only the host port
+# differs (8081 to avoid clashing with rauthy on 8080).
+#   → http://localhost:8081
+services:
+  wordpress:
+    ports:
+      - "8081:80"
