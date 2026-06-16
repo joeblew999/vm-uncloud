@@ -155,6 +155,28 @@ mise run state:remote  # move tofu state to Cloudflare R2 (durable, lockable)
 > [#369](https://github.com/psviderski/uncloud/issues/369) (`uc undeploy` / an
 > "app" = compose-file concept). Until then, per-recipe removal is `uc rm <service>`.
 
+## Prices
+
+The price model — rate cards to size a node class per workload — lives in
+`state/prices-*.jsonl`, split by class, each a **live catalog** owned by its
+refresh task (run `--write` to persist). The incurred-cost ledger is separate
+(`state/log.jsonl`).
+
+```bash
+mise run prices:show                       # all of them, merged, as a table
+mise run prices:refresh:hetzner-cloud      # state/prices-hetzner-cloud.jsonl      (VPS, hcloud API)
+mise run prices:refresh:hetzner-dedicated  # state/prices-hetzner-dedicated.jsonl  (new-order, Robot API)
+mise run prices:refresh:hetzner-auction    # state/prices-hetzner-auction.jsonl    (auction floor, Robot API)
+mise run prices:refresh:all                # regenerate + persist all of them
+```
+
+`prices-static.jsonl` holds the hand-maintained rest (storage, egress, software,
+vultr/equinix/local). The Robot feeds (dedicated/auction) need a web-service user
+(`HETZNER_ROBOT_USER`/`_PASSWORD` in the keychain — robot.hetzner.com → Settings →
+Web service). **Dedicated is two worlds:** new-order (current hardware, e.g.
+64 GB ≈ €187/mo) vs the **auction** floor (used, e.g. 64 GB ≈ €46/mo) — pick per
+how long-lived the box is.
+
 ## Web GUI
 
 A browser status board (Hetzner nodes, uncloud services, snapshots, the price

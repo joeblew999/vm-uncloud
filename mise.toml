@@ -178,6 +178,18 @@ run = "fnox exec --if-missing ignore -- nu scripts/prices-refresh-hetzner-dedica
 description = "Regenerate state/prices-hetzner-auction.jsonl (Hetzner server-auction floor — cheapest used dedicated per RAM tier). Needs HETZNER_ROBOT_USER/PASSWORD. Dry-run by default; --write to persist."
 run = "fnox exec --if-missing ignore -- nu scripts/prices-refresh-hetzner-auction.nu"
 
+# Convenience: refresh + PERSIST every live price file in one shot. The Robot
+# feeds (dedicated/auction) skip cleanly if HETZNER_ROBOT_USER/PASSWORD aren't set.
+[tasks."prices:refresh:all"]
+description = "Regenerate + persist ALL live price files (cloud + dedicated + auction). Robot feeds skip if no creds."
+shell = "nu -c"
+run = '''
+^fnox exec --if-missing ignore -- nu scripts/prices-refresh-hetzner-cloud.nu --write
+for s in ["prices-refresh-hetzner-dedicated.nu" "prices-refresh-hetzner-auction.nu"] {
+  do { ^fnox exec --if-missing ignore -- nu ("scripts" | path join $s) --write } | complete | ignore
+}
+'''
+
 # ---------------------------------------------------------------------------
 # win — Windows desktop node (dockur/windows on a dedicated win-batch node, its
 # own tofu workspace + uncloud context). Cost discipline: snapshot then down.
