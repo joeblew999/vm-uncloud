@@ -2,7 +2,7 @@
 
 One repo, one tool (uncloud). But not one node: workloads differ in size, burst,
 and whether they need real virtualization (KVM). This is the map. Pricing is in
-`state/prices-*.jsonl` (`mise run costs:show`).
+`state/prices-*.jsonl` (`mise run prices:show`).
 
 ## Node classes
 
@@ -67,7 +67,7 @@ RDP `:3389` and the dev SSH port.
 1. **win-batch** — ✅ DONE. `windows` var + `--context` workspaces; `win:up` →
    `win:deploy` → `win:rdp`/`win:viewer` → `win:snapshot` → `win:down`.
 2. **Control plane** — ✅ DONE. RDP/viewer tasks (`win:rdp*`, `win:viewer`),
-   cost ledger (`costs:show`), read-only web GUI (`gui:up`).
+   cost ledger (`prices:show`), read-only web GUI (`gui:up`).
 3. **win-kvm** — ✅ SCAFFOLDED (needs `VULTR_API_KEY` + a first live run to
    verify; Vultr BM is billable so untested here). Flow:
 

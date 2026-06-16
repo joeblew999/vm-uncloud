@@ -27,7 +27,7 @@ everything is an uncloud recipe or a thin mise task over uncloud/tofu/hcloud).
 - `gui/server/serve.nu` — one http-nu + Datastar closure = the read-only web
   status board. `pitchfork.toml` supervises `gui` + `xs`. `mise run gui:up`.
 - `tofu/` — `windows` var gates the win node class (RDP firewall, `windows.<domain>`,
-  no wildcard). `state/prices-*.jsonl` = price model (`mise run costs:show`).
+  no wildcard). `state/prices-*.jsonl` = price model (`mise run prices:show`).
 
 ## Gotchas (don't relitigate — see [[feedback_vm_uncloud_gotchas]])
 

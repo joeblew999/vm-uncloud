@@ -4,7 +4,7 @@
 # it's a straight live dump (all non-deprecated cpx*/cax*/ccx* at --location), so
 # there's nothing to hand-maintain and no rows can go stale or missing.
 #
-# Dedicated (Hetzner Robot) lives in state/prices-hetzner-dedicated.jsonl (costs:refresh-robot);
+# Dedicated (Hetzner Robot) lives in state/prices-hetzner-dedicated.jsonl (prices:refresh:hetzner-dedicated);
 # everything static (storage/egress/software + non-Hetzner compute) in
 # state/prices-static.jsonl. See docs/PLACEMENT.md for which node class runs what.
 #

@@ -154,24 +154,24 @@ run = "fnox exec --if-missing ignore -- nu scripts/smoke.nu"
 
 # ---------------------------------------------------------------------------
 # Costs — queryable price model, split by class into three state/prices-*.jsonl:
-#   prices-hetzner-cloud.jsonl        Hetzner Cloud VPS      (live, costs:refresh)
-#   prices-hetzner-dedicated.jsonl  Hetzner Robot dedicated (live, costs:refresh-robot)
+#   prices-hetzner-cloud.jsonl        Hetzner Cloud VPS      (live, prices:refresh:hetzner-cloud)
+#   prices-hetzner-dedicated.jsonl  Hetzner Robot dedicated (live, prices:refresh:hetzner-dedicated)
 #   prices-static.jsonl      static: storage, egress, software, vultr/equinix/local
 # Use them to pick a node class per workload (cpx22 cluster vs cpx42 Windows vs
 # dedicated KVM bare metal).
 # ---------------------------------------------------------------------------
-[tasks."costs:show"]
+[tasks."prices:show"]
 description = "Print the price model (all state/prices-*.jsonl) as a table — provider/SKU pricing to size nodes per workload."
 shell = "nu --commands"
 run = "glob state/prices-*.jsonl | each {|f| open --raw $f | lines | where {|l| ($l | str trim) != \"\" } | each {|l| $l | from json } } | flatten | table -e"
 
-[tasks."costs:refresh"]
+[tasks."prices:refresh:hetzner-cloud"]
 description = "Regenerate state/prices-hetzner-cloud.jsonl (Hetzner Cloud VPS) from the live hcloud API. Dry-run by default; pass --write to persist."
-run = "fnox exec --if-missing ignore -- nu scripts/costs-refresh.nu"
+run = "fnox exec --if-missing ignore -- nu scripts/prices-refresh-hetzner-cloud.nu"
 
-[tasks."costs:refresh-robot"]
+[tasks."prices:refresh:hetzner-dedicated"]
 description = "Regenerate state/prices-hetzner-dedicated.jsonl (Hetzner dedicated) from the live Robot Webservice. Needs HETZNER_ROBOT_USER/PASSWORD. Dry-run by default; --write to persist."
-run = "fnox exec --if-missing ignore -- nu scripts/costs-refresh-robot.nu"
+run = "fnox exec --if-missing ignore -- nu scripts/prices-refresh-hetzner-dedicated.nu"
 
 # ---------------------------------------------------------------------------
 # win — Windows desktop node (dockur/windows on a dedicated win-batch node, its

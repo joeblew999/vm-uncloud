@@ -25,7 +25,7 @@ CLOUDFLARE_ACCOUNT_ID = { provider = "keychain", value = "CLOUDFLARE_ACCOUNT_ID"
 # Optional: absent until you run win-kvm; scripts use `fnox exec --if-missing ignore`.
 VULTR_API_KEY         = { provider = "keychain", value = "VULTR_API_KEY" }
 # Hetzner Robot (dedicated/Robot) Webservice — HTTP Basic auth for the dedicated
-# price feed (scripts/costs-refresh-robot.nu → robot-ws.your-server.de). SEPARATE
+# price feed (scripts/prices-refresh-hetzner-dedicated.nu → robot-ws.your-server.de). SEPARATE
 # from HCLOUD_TOKEN: create a web-service user at robot.hetzner.com → Settings →
 # "Web service and app settings". Optional (if-missing ignore) until you run it.
 HETZNER_ROBOT_USER     = { provider = "keychain", value = "HETZNER_ROBOT_USER" }

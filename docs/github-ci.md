@@ -87,7 +87,7 @@ Hetzner Cloud node or the same Vultr box.)
 - **Phase 3 — `build-mac`**: add a `macos` recipe using **`dockurr/macos`** (same dockur/KVM pattern as the `windows` recipe), on a KVM host. Register `[self-hosted, macos, builder]`; prove the jackdaw macOS build. Confirm the macOS-on-non-Apple-HW licensing posture first.
 - **Phase 4 — snapshot/restore lifecycle**: `builder:up` / `builder:down` / `builder:snapshot` via `vultr-snapshot.nu` + `r2`; scheduled cache-warm refresh.
 - **Phase 5 — reusable-mise-ci integration**: consuming repos set `os-matrix` to runner labels; keep GitHub runners as fallback when a desktop is down. Consider a `free-disk` / runner-selection input on `reusable-mise-ci.yml`.
-- **Phase 6 — cost + security**: feed runner uptime into the cost ledger (`state/prices-*.jsonl`, `costs:show`, GUI); on-demand wake vs always-on. **SECURITY:** self-hosted runners on a **public** repo run untrusted PR code — restrict to our own branches / private repos / ephemeral runners. jackdaw is a public fork → do NOT run untrusted PRs on a persistent builder.
+- **Phase 6 — cost + security**: feed runner uptime into the cost ledger (`state/prices-*.jsonl`, `prices:show`, GUI); on-demand wake vs always-on. **SECURITY:** self-hosted runners on a **public** repo run untrusted PR code — restrict to our own branches / private repos / ephemeral runners. jackdaw is a public fork → do NOT run untrusted PRs on a persistent builder.
 
 ## Risks / open questions
 

@@ -14,7 +14,7 @@
 
 def need [k: string] {
   if (($env | get -o $k | default "") | is-empty) {
-    print -e $"($k) not set — see mise.local.toml.example / `mise run costs:show` for sizing"
+    print -e $"($k) not set — see mise.local.toml.example / `mise run prices:show` for sizing"
     exit 1
   }
 }

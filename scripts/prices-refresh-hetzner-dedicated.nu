@@ -3,7 +3,7 @@
 # catalog — from the live Robot Webservice (robot-ws.your-server.de/order/server/
 # product). SEPARATE API from the Cloud one: different host, different auth (HTTP
 # Basic with a web-service user, NOT HCLOUD_TOKEN). hcloud can't see dedicated
-# pricing at all, hence this companion to costs:refresh.
+# pricing at all, hence this companion to prices:refresh:hetzner-cloud.
 #
 # This file is OWNED by this script — a straight live dump of the standardized
 # new-order line (AX*/EX*/SX*/GEX*, ids like AX42-1). Net monthly + setup, specs
