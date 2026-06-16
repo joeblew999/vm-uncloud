@@ -67,7 +67,7 @@ RDP `:3389` and the dev SSH port.
 1. **win-batch** — ✅ DONE. `windows` var + `--context` workspaces; `win:up` →
    `win:deploy` → `win:rdp`/`win:viewer` → `win:snapshot` → `win:down`.
 2. **Control plane** — ✅ DONE. RDP/viewer tasks (`win:rdp*`, `win:viewer`),
-   cost ledger (`prices:show`), read-only web GUI (`gui:up`).
+   price model (`prices:show`), read-only web GUI (`gui:up`).
 3. **win-kvm** — ✅ SCAFFOLDED (needs `VULTR_API_KEY` + a first live run to
    verify; Vultr BM is billable so untested here). Flow:
 

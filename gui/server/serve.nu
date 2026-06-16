@@ -1,6 +1,6 @@
 # http-nu entry — `http-nu --datastar $addr gui/server/serve.nu` (gui:serve).
 # A read-only status board for the vm-uncloud control plane: Hetzner nodes,
-# uncloud services, snapshots, the cost model, and the deploy ledger. Runs under
+# uncloud services, snapshots, the price model, and the deploy ledger. Runs under
 # `fnox exec`, so hcloud calls see HCLOUD_TOKEN.
 #
 #   GET /                     full page
@@ -92,10 +92,10 @@ def snapshots-render [] {
 </tbody></table></figure>"
 }
 
-# Cost model from the split state/prices-*.jsonl files (compute rows).
-def costs-render [] {
+# Price model from the split state/prices-*.jsonl files (compute rows).
+def prices-render [] {
     let files = (glob state/prices-*.jsonl)
-    if ($files | is-empty) { return "<aside><em>no cost files</em></aside>" }
+    if ($files | is-empty) { return "<aside><em>no price files</em></aside>" }
     let rows = ($files | each {|f| open --raw $f | lines | where {|l| ($l | str trim) != "" } | each {|l| $l | from json } } | flatten | where category == "compute")
     let body = ($rows | each {|r|
         let prov = (html-esc ($r.provider? | default '-'))
@@ -181,8 +181,8 @@ def render-board [] {
 (ledger-render)
 </section>
 
-<section><h2>Cost model <small>— state/prices-*.jsonl</small></h2>
-(costs-render)
+<section><h2>Prices <small>— state/prices-*.jsonl</small></h2>
+(prices-render)
 </section>
 
 <section><h2>Actions <small>— fire-and-forget via pitchfork</small></h2>

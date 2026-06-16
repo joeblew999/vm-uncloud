@@ -157,7 +157,7 @@ mise run state:remote  # move tofu state to Cloudflare R2 (durable, lockable)
 
 ## Web GUI
 
-A browser status board (Hetzner nodes, uncloud services, snapshots, the cost
+A browser status board (Hetzner nodes, uncloud services, snapshots, the price
 model, and the deploy ledger) served by http-nu + Datastar, supervised by
 pitchfork. Read-only today; actions (deploy/win lifecycle) are the next layer.
 

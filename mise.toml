@@ -153,12 +153,12 @@ hide = true
 run = "fnox exec --if-missing ignore -- nu scripts/smoke.nu"
 
 # ---------------------------------------------------------------------------
-# Costs — queryable price model, split by class into three state/prices-*.jsonl:
-#   prices-hetzner-cloud.jsonl        Hetzner Cloud VPS      (live, prices:refresh:hetzner-cloud)
-#   prices-hetzner-dedicated.jsonl  Hetzner Robot dedicated (live, prices:refresh:hetzner-dedicated)
-#   prices-static.jsonl      static: storage, egress, software, vultr/equinix/local
-# Use them to pick a node class per workload (cpx22 cluster vs cpx42 Windows vs
-# dedicated KVM bare metal).
+# Prices — queryable price model (rate cards), split by class into three files:
+#   prices-hetzner-cloud.jsonl      Hetzner Cloud VPS        — live, prices:refresh:hetzner-cloud
+#   prices-hetzner-dedicated.jsonl  Hetzner Robot dedicated  — live, prices:refresh:hetzner-dedicated
+#   prices-static.jsonl             static: storage, egress, software, vultr/equinix/local
+# (The incurred-cost ledger is state/log.jsonl, separate.) Use these to pick a
+# node class per workload (cpx22 cluster vs cpx42 Windows vs dedicated KVM BM).
 # ---------------------------------------------------------------------------
 [tasks."prices:show"]
 description = "Print the price model (all state/prices-*.jsonl) as a table — provider/SKU pricing to size nodes per workload."
@@ -417,7 +417,7 @@ description = "Probe PUT/GET/DELETE against the configured R2 bucket (run after 
 run = "fnox exec --if-missing ignore -- nu r2/check.nu"
 
 # ---------------------------------------------------------------------------
-# gui — browser status board (nodes, services, snapshots, costs, deploy ledger),
+# gui — browser status board (nodes, services, snapshots, prices, deploy ledger),
 # served by http-nu + Datastar, supervised by pitchfork alongside the xs event
 # bus. Named gui:*/xs:* so they don't collide with the cluster's up/down.
 #   mise run gui:up   → http://127.0.0.1:8080   ;   mise run gui:down
