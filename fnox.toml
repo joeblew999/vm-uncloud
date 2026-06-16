@@ -24,6 +24,12 @@ CLOUDFLARE_ACCOUNT_ID = { provider = "keychain", value = "CLOUDFLARE_ACCOUNT_ID"
 # win-kvm only — read natively by `vultr-cli` for Vultr Bare Metal provisioning.
 # Optional: absent until you run win-kvm; scripts use `fnox exec --if-missing ignore`.
 VULTR_API_KEY         = { provider = "keychain", value = "VULTR_API_KEY" }
+# Hetzner Robot (dedicated/Robot) Webservice — HTTP Basic auth for the dedicated
+# price feed (scripts/costs-refresh-robot.nu → robot-ws.your-server.de). SEPARATE
+# from HCLOUD_TOKEN: create a web-service user at robot.hetzner.com → Settings →
+# "Web service and app settings". Optional (if-missing ignore) until you run it.
+HETZNER_ROBOT_USER     = { provider = "keychain", value = "HETZNER_ROBOT_USER" }
+HETZNER_ROBOT_PASSWORD = { provider = "keychain", value = "HETZNER_ROBOT_PASSWORD" }
 # ai:ask only — Anthropic key for the yoke LLM driver. Optional (if-missing ignore).
 ANTHROPIC_API_KEY     = { provider = "keychain", value = "ANTHROPIC_API_KEY" }
 # win-kvm R2 snapshot transit only. aws-cli reads AWS_* natively, so expose the

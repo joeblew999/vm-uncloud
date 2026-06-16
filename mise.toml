@@ -161,6 +161,14 @@ description = "Print state/costs.jsonl as a table — provider/SKU pricing to si
 shell = "nu --commands"
 run = "open state/costs.jsonl | lines | each {|l| $l | from json } | table -e"
 
+[tasks."costs:refresh"]
+description = "Refresh hetzner-cloud prices in state/costs.jsonl from the live API. Dry-run by default; pass --write to persist."
+run = "fnox exec --if-missing ignore -- nu scripts/costs-refresh.nu"
+
+[tasks."costs:refresh-robot"]
+description = "Refresh hetzner-dedicated (Robot) prices in state/costs.jsonl from the Robot Webservice. Needs HETZNER_ROBOT_USER/PASSWORD. Dry-run by default; --write to persist."
+run = "fnox exec --if-missing ignore -- nu scripts/costs-refresh-robot.nu"
+
 # ---------------------------------------------------------------------------
 # win — Windows desktop node (dockur/windows on a dedicated win-batch node, its
 # own tofu workspace + uncloud context). Cost discipline: snapshot then down.
