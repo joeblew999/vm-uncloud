@@ -36,7 +36,7 @@ if ($ip | is-empty) { print -e "could not resolve the Windows node IP (is it up?
 
 print $"polling ($ip):3389 \(every 30s, max 90 min\)..."
 
-job spawn --description "rdp-wait" {
+job spawn {
     mut elapsed = 0
     let max = 90 * 60
     loop {
