@@ -92,11 +92,11 @@ def snapshots-render [] {
 </tbody></table></figure>"
 }
 
-# Cost model from state/costs.jsonl (compute rows).
+# Cost model from the split state/costs-*.jsonl files (compute rows).
 def costs-render [] {
-    let path = "state/costs.jsonl"
-    if not ($path | path exists) { return "<aside><em>no costs.jsonl</em></aside>" }
-    let rows = (open $path | lines | where ($it | str trim | is-not-empty) | each {|l| $l | from json } | where category == "compute")
+    let files = (glob state/costs-*.jsonl)
+    if ($files | is-empty) { return "<aside><em>no cost files</em></aside>" }
+    let rows = ($files | each {|f| open --raw $f | lines | where {|l| ($l | str trim) != "" } | each {|l| $l | from json } } | flatten | where category == "compute")
     let body = ($rows | each {|r|
         let prov = (html-esc ($r.provider? | default '-'))
         let sku = (html-esc ($r.sku? | default '-'))
@@ -181,7 +181,7 @@ def render-board [] {
 (ledger-render)
 </section>
 
-<section><h2>Cost model <small>— state/costs.jsonl</small></h2>
+<section><h2>Cost model <small>— state/costs-*.jsonl</small></h2>
 (costs-render)
 </section>
 

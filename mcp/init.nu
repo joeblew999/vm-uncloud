@@ -21,7 +21,8 @@ def uncloud-ledger [] {
   if ($p | path exists) { open $p | lines | where ($it | str trim | is-not-empty) | each {|l| $l | from json } } else { [] }
 }
 
-# Cost model (provider/SKU pricing).
+# Cost model (provider/SKU pricing) — merged from the split files (costs-vps,
+# costs-dedicated, costs-other).
 def uncloud-costs [] {
-  open state/costs.jsonl | lines | where ($it | str trim | is-not-empty) | each {|l| $l | from json }
+  glob state/costs-*.jsonl | each {|f| open --raw $f | lines | where {|l| ($l | str trim) != "" } | each {|l| $l | from json } } | flatten
 }
