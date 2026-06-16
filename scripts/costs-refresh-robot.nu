@@ -1,5 +1,5 @@
 #!/usr/bin/env nu
-# Generate state/costs-dedicated.jsonl — the Hetzner dedicated (Robot) price
+# Generate state/prices-hetzner-dedicated.jsonl — the Hetzner dedicated (Robot) price
 # catalog — from the live Robot Webservice (robot-ws.your-server.de/order/server/
 # product). SEPARATE API from the Cloud one: different host, different auth (HTTP
 # Basic with a web-service user, NOT HCLOUD_TOKEN). hcloud can't see dedicated
@@ -15,9 +15,9 @@
 
 def main [
   --location: string = ""   # filter to a Robot location code (e.g. FSN1); "" = first price/product
-  --write                    # persist to state/costs-dedicated.jsonl (default: dry-run)
+  --write                    # persist to state/prices-hetzner-dedicated.jsonl (default: dry-run)
 ] {
-  let file = "state/costs-dedicated.jsonl"
+  let file = "state/prices-hetzner-dedicated.jsonl"
 
   let user = ($env.HETZNER_ROBOT_USER? | default "")
   let pass = ($env.HETZNER_ROBOT_PASSWORD? | default "")

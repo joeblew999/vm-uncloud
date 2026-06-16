@@ -198,7 +198,7 @@ an uncloud recipe** — no bespoke parallel lifecycle.
 
 Windows is heavy + bursty, so it runs on its **own dedicated, teardownable node**
 (`win-batch` — a `cpx42` in its own tofu workspace + uncloud context), never on
-the always-on `cpx22` cluster. The whole cycle (`state/costs-*.jsonl` has pricing):
+the always-on `cpx22` cluster. The whole cycle (`state/prices-*.jsonl` has pricing):
 
 ```bash
 cp tofu/win-batch.tfvars.example tofu/win-batch.tfvars   # one-time

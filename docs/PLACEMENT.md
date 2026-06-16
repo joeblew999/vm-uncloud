@@ -2,7 +2,7 @@
 
 One repo, one tool (uncloud). But not one node: workloads differ in size, burst,
 and whether they need real virtualization (KVM). This is the map. Pricing is in
-`state/costs-*.jsonl` (`mise run costs:show`).
+`state/prices-*.jsonl` (`mise run costs:show`).
 
 ## Node classes
 

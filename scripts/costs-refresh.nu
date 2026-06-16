@@ -1,12 +1,12 @@
 #!/usr/bin/env nu
-# Generate state/costs-vps.jsonl — the Hetzner Cloud VPS price catalog — from the
+# Generate state/prices-hetzner-cloud.jsonl — the Hetzner Cloud VPS price catalog — from the
 # live hcloud API (`hcloud server-type list`). This file is OWNED by this script:
 # it's a straight live dump (all non-deprecated cpx*/cax*/ccx* at --location), so
 # there's nothing to hand-maintain and no rows can go stale or missing.
 #
-# Dedicated (Hetzner Robot) lives in state/costs-dedicated.jsonl (costs:refresh-robot);
+# Dedicated (Hetzner Robot) lives in state/prices-hetzner-dedicated.jsonl (costs:refresh-robot);
 # everything static (storage/egress/software + non-Hetzner compute) in
-# state/costs-other.jsonl. See docs/PLACEMENT.md for which node class runs what.
+# state/prices-static.jsonl. See docs/PLACEMENT.md for which node class runs what.
 #
 # Dry-run by default (prints the catalog); --write persists. Net prices, monthly
 # 2dp / hourly 4dp. Conventions: `^hcloud ... -o json | from json`, jsonl one
@@ -14,9 +14,9 @@
 
 def main [
   --location: string = "fsn1"   # Hetzner location whose NET price to record
-  --write                        # persist to state/costs-vps.jsonl (default: dry-run)
+  --write                        # persist to state/prices-hetzner-cloud.jsonl (default: dry-run)
 ] {
-  let file = "state/costs-vps.jsonl"
+  let file = "state/prices-hetzner-cloud.jsonl"
 
   let rows = (^hcloud server-type list -o json | from json
     | where {|t| (not $t.deprecated) and (($t.name | str starts-with "cpx") or ($t.name | str starts-with "cax") or ($t.name | str starts-with "ccx")) }
