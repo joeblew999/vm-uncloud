@@ -2,50 +2,22 @@
 
 [Uncloud](https://github.com/psviderski/uncloud) cluster on a Hetzner VPS, on your own Cloudflare domain. Create it, deploy apps, tear it down. The only tool you install is [`mise`](https://mise.jdx.dev).
 
-> Runs **upstream** [psviderski/uncloud](https://github.com/psviderski/uncloud) —
-> no forks. See [Upstream, no forks](#upstream-no-forks) for the one local
-> accommodation (a PTY wrapper for headless `uc machine init`).
-
-```bash
-mise install      # opentofu, hcloud, nushell, fnox
-mise run setup    # the uncloud CLI (uc)
-mise run up       # server + wildcard DNS + cluster
-mise run deploy   # deploy compose.yaml
-mise run down     # destroy everything
-```
-
-## Upstream, no forks
-
-vm-uncloud runs **upstream `psviderski/uncloud`** directly. The `uncloud` CLI is
-a normal **mise tool** — `[tools]` → `github:psviderski/uncloud` (pinned, bump
-deliberately) — so `mise install` provides it; no out-of-band binary in
-`/usr/local/bin`. Upstream `uncloudd` already defaults corrosion to a
-**multi-arch image** — `ghcr.io/unlabs-dev/corrosion` (amd64 **and** arm64) — so
-ARM boxes work out of the box.
-
-We **used to** carry forks of uncloud + corrosion. They turned out to be solving
-non-problems (2026-06-24): upstream corrosion builds arm64 natively now and
-publishes an arm64 image, and the one real patch (headless `uc machine init`) is
-handled by a shell wrapper, not code:
-
-**The one local accommodation:** upstream's `uc machine init/add` readiness
-spinner (bubbletea) opens `/dev/tty`, so it dies in a non-interactive shell (CI,
-agents, `mise run up`). `scripts/up.nu` wraps it in a PTY (`script -q /dev/null …`
-on macOS, `script -qec` on Linux) — verified to work. Upstream closed
-[psviderski/uncloud#386](https://github.com/psviderski/uncloud/issues/386) as
-not-reproducible, so the wrapper stays rather than a fork.
+Runs **upstream** [psviderski/uncloud](https://github.com/psviderski/uncloud) — no forks. The `uncloud` CLI is a mise tool, so `mise install` provides it.
 
 ## Setup
 
 Need: a Cloudflare zone + token (`Zone:DNS:Edit`), a Hetzner project + SSH key.
 
 ```bash
-cp tofu/terraform.tfvars.example tofu/terraform.tfvars   # set domain, cloudflare_zone_id, ssh_key_name
+mise install                                             # all tools, incl. the uncloud CLI
+cp tofu/terraform.tfvars.example tofu/terraform.tfvars   # domain, cloudflare_zone_id, ssh_key_name
 mise run secrets:set                                     # tokens -> keychain
-mise run up
+mise run up                                              # server + wildcard DNS + cluster
+mise run deploy                                          # deploy compose.yaml
+mise run down                                            # destroy everything
 ```
 
-Run `up`/`down` from a real terminal (`uc` uses a TTY). Secrets stay in the keychain via `fnox`, never on disk. TLS is one `*.<domain>` wildcard cert via Cloudflare DNS-01 — any subdomain just works.
+Secrets stay in the keychain via `fnox`, never on disk. TLS is one `*.<domain>` wildcard cert via Cloudflare DNS-01 — any subdomain just works. (`scripts/up.nu` gives `uncloud machine init` a PTY so it runs headless — CI/agents too.)
 
 ## Config — `tofu/terraform.tfvars`
 
@@ -76,7 +48,7 @@ mise watch deploy      # re-deploy on save
 mise run push [image]  # push only — built-in registry, no docker pull
 ```
 
-Building needs local Docker (e.g. OrbStack on a Mac); the push is `uc`'s own. Build arch must match the server: `cpx22` is x86, so build `linux/amd64` (set `platform: linux/amd64` on the service) — or use `cax11` ARM nodes to match an Apple-silicon Mac.
+Building needs local Docker (e.g. OrbStack on a Mac); the push is `uncloud`'s own. Build arch must match the server: `cpx22` is x86, so build `linux/amd64` (set `platform: linux/amd64` on the service) — or use `cax11` ARM nodes to match an Apple-silicon Mac.
 
 ## Recipes
 
@@ -143,8 +115,8 @@ mise run state:remote  # move tofu state to Cloudflare R2 (durable, lockable)
 > **Teardown granularity:** `mise run down` is whole-node (tofu destroy) — right
 > for the ephemeral win nodes, but there's no clean "remove just one recipe, keep
 > the node + its other services" yet. Tracked upstream: uncloud
-> [#369](https://github.com/psviderski/uncloud/issues/369) (`uc undeploy` / an
-> "app" = compose-file concept). Until then, per-recipe removal is `uc rm <service>`.
+> [#369](https://github.com/psviderski/uncloud/issues/369) (`uncloud undeploy` / an
+> "app" = compose-file concept). Until then, per-recipe removal is `uncloud rm <service>`.
 
 ## Prices
 
