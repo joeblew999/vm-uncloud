@@ -1,0 +1,14 @@
+# Local-only overlay for `mise run recipe:local turso`. The base compose.yaml is
+# internal-only (no published ports) and backs up to R2; locally we want neither.
+# So: publish the HTTP port for host access, and force bottomless OFF (prepare.nu
+# already disables it in dry mode — this makes it unmissable). Local data is
+# ephemeral dev state; `--down` wipes the volume.
+services:
+  sqld:
+    environment:
+      SQLD_ENABLE_BOTTOMLESS_REPLICATION: "false"
+      # null (not "") UNSETS it — sqld treats an EMPTY key as auth-on-but-broken
+      # (401s everything), whereas absent = no auth. Verified.
+      SQLD_AUTH_JWT_KEY:
+    ports:
+      - "8080:8080"

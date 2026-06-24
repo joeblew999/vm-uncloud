@@ -143,6 +143,43 @@ description = "Shallow-clone/update uncloud-recipes into .src/"
 hide = true
 run = "nu scripts/recipes-sync.nu"
 
+# ---------------------------------------------------------------------------
+# Turso / libSQL — self-hosted SQLite (D1 replacement) with R2-backed DR.
+# The `turso` recipe runs sqld with bottomless backup -> R2. These tasks
+# REHEARSE recovery (read-only on R2) so DR is a runnable drill, not a hope.
+# ---------------------------------------------------------------------------
+[tasks."turso:deploy"]
+description = "Deploy the turso/libSQL recipe onto the cluster (bottomless backup -> R2)"
+run = "mise run recipe turso"
+
+[tasks."turso:token"]
+description = "Print the libSQL client auth token (generates+persists the JWT keypair on first run). Give this to a consuming project."
+run = "nu recipes/turso/auth.nu token"
+
+[tasks."turso:db:create"]
+description = "Create a new SQLite database (namespace) on the turso server. Usage: mise run turso:db:create -- <name>"
+run = "fnox exec -- nu recipes/turso/db.nu create"
+
+[tasks."turso:db:delete"]
+description = "Delete a SQLite database (namespace). DESTRUCTIVE. Usage: mise run turso:db:delete -- <name>"
+run = "fnox exec -- nu recipes/turso/db.nu delete"
+
+[tasks."turso:db:list"]
+description = "List the SQLite databases (from their R2 backups) and generation counts"
+run = "fnox exec -- nu recipes/turso/dr.nu list"
+
+[tasks."turso:dr:list"]
+description = "DR: list every database + its backup generations in R2"
+run = "fnox exec -- nu recipes/turso/dr.nu list"
+
+[tasks."turso:dr:verify"]
+description = "DR WEEKLY DRILL: restore the latest R2 backup + integrity-check it (read-only, exits non-zero on failure)"
+run = "fnox exec -- nu recipes/turso/dr.nu verify"
+
+[tasks."turso:dr:restore"]
+description = "DR: restore a Turso backup from R2 to a local .db file (recovery / point-in-time via --utc-time)"
+run = "fnox exec -- nu recipes/turso/dr.nu restore"
+
 [tasks."state:remote"]
 description = "Move tofu state into Cloudflare R2 (durable + lockable; one-time)"
 run = "fnox exec --if-missing ignore -- nu scripts/state-remote.nu"

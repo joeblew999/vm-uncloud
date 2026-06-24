@@ -1,0 +1,69 @@
+# Turso / libSQL (sqld) — self-hosted SQLite-as-a-server, a durable, authenticated
+# drop-in for Cloudflare D1 that ANY of our projects can consume.
+#
+#   mise run recipe turso          # on the cluster (auth + backup -> R2)
+#   mise run recipe:local turso    # locally (no auth, no backup, ephemeral dev)
+#
+# What a consuming project gets (see README "Consume from another project"):
+#   - URL:   https://db.<domain>            (public, TLS via the wildcard cert)
+#            or http://sqld:8080            (in-cluster, on the overlay)
+#   - token: mise run turso:token           (libSQL `authToken`)
+#   - a DB:  mise run turso:db:create <name>
+#   …and it's automatically backed up to R2 and covered by the weekly DR drill.
+#
+# ── DURABILITY ────────────────────────────────────────────────────────────────
+# sqld's "bottomless" replication streams every WAL frame to R2; on boot with an
+# empty volume it restores from the latest generation. Verified end-to-end
+# against real R2 (write → destroy volume → fresh node restores). So the box is
+# disposable; R2 is the source of truth. prepare.nu wires R2 creds (derived from
+# CLOUDFLARE_API_TOKEN like the tofu backend) and REFUSES to deploy without R2.
+#
+# ── AUTH (libSQL-native JWT) ──────────────────────────────────────────────────
+# SQLD_AUTH_JWT_KEY (Ed25519 public key) makes every request require a Bearer
+# JWT — verified: no/bad token → 401, signed token → 200. prepare.nu generates +
+# persists the keypair (auth.nu) and emits the public key; `turso:token` prints
+# the client token. So the public endpoint is safe to expose.
+#
+# ── MULTI-DB ──────────────────────────────────────────────────────────────────
+# Namespaces ON = one server, many isolated SQLite DBs. The `default` DB answers
+# at the base host; named DBs (turso:db:create) are addressed by Host subdomain
+# and each gets its OWN R2 backup + independent DR. The admin API (DB create/
+# delete) binds the overlay only — never public.
+#
+# Image is multi-arch (amd64+arm64) — no `platform:` pin. Tag `:latest`; pin when settled.
+services:
+  sqld:
+    image: ghcr.io/tursodatabase/libsql-server:latest
+    # `exec "$@"` in the image entrypoint appends the SQLD_*/LIBSQL_* env below.
+    command: ["sqld", "--enable-namespaces", "--admin-listen-addr", "0.0.0.0:9090"]
+    environment:
+      SQLD_NODE: primary
+      SQLD_HTTP_LISTEN_ADDR: 0.0.0.0:8080
+      # libSQL-native JWT auth: base64url Ed25519 public key (single line →
+      # uncloud's trailing-\n is harmless here). Empty = no auth (local dev only).
+      SQLD_AUTH_JWT_KEY: ${TURSO_JWT_PUBKEY}
+      # Checkpoint the WAL every 5 min (default 1h) so frames flush to R2 sooner.
+      SQLD_CHECKPOINT_INTERVAL_S: "300"
+      # ── Bottomless backup -> R2 (values from prepare.nu) ──────────────────
+      # ENABLED is explicit "true"/"false": an EMPTY value would wrongly turn it
+      # ON (clap treats a set-but-empty flag env as present), so never blank.
+      SQLD_ENABLE_BOTTOMLESS_REPLICATION: ${TURSO_BACKUP_ENABLED}
+      LIBSQL_BOTTOMLESS_BUCKET: ${TURSO_BUCKET}
+      LIBSQL_BOTTOMLESS_ENDPOINT: ${TURSO_ENDPOINT}
+      LIBSQL_BOTTOMLESS_AWS_ACCESS_KEY_ID: ${TURSO_AKID}
+      LIBSQL_BOTTOMLESS_AWS_SECRET_ACCESS_KEY: ${TURSO_SECRET}
+      LIBSQL_BOTTOMLESS_AWS_DEFAULT_REGION: ${TURSO_REGION}
+      # DB-ID prefixes every namespace's R2 backup (required with namespaces).
+      LIBSQL_BOTTOMLESS_DATABASE_ID: ${TURSO_DB_ID}
+    volumes:
+      # Hot local copy. Named volume (uncloud can't bind-mount host paths) — if
+      # it's lost, R2 is the source of truth.
+      - sqld_data:/var/lib/sqld
+    x-ports:
+      # Public HTTPS endpoint — Caddy fronts + terminates TLS (wildcard cert).
+      # Safe to expose because JWT auth is on. The admin port 9090 is NOT here →
+      # stays overlay-internal. In-cluster apps can still use http://sqld:8080.
+      - db.${DOMAIN}:8080/https
+
+volumes:
+  sqld_data:
