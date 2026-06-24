@@ -6,15 +6,15 @@
 #     (`uc build --push` / `uc image push`) — no registry, no extra plugin.
 
 def main [] {
-  # Install OUR uncloud fork's `uc`. It embeds our install.sh (defaults uncloudd
-  # to joeblew999/uncloud) and our corrosion-image default — so the whole stack
-  # runs off our forks with no further config. Override repo with UNCLOUD_FORK_REPO.
-  let repo = ($env.UNCLOUD_FORK_REPO? | default "joeblew999/uncloud")
-  # PINNED — fork tags use a `-jb.N` PRERELEASE suffix, which semver-sorts BELOW
-  # the base version, so "latest" resolution is unreliable (a stray plain tag
-  # would outrank it). Always pin an explicit tag for reproducibility. Bump this
-  # when a newer fork release is verified. Override with UNCLOUD_FORK_VERSION.
-  let ver = ($env.UNCLOUD_FORK_VERSION? | default "v0.20.0-jb.3")
+  # Install UPSTREAM uncloud's `uc`. We dropped our fork (2026-06-24): upstream
+  # already publishes the same binary assets AND defaults uncloudd to a multi-arch
+  # corrosion image (ghcr.io/unlabs-dev/corrosion, has arm64), so no fork is
+  # needed. The headless-spinner issue (#386, closed upstream as not-reproducible)
+  # is handled by the PTY wrapper in up.nu, not a code patch. Override with
+  # UNCLOUD_FORK_REPO / UNCLOUD_FORK_VERSION if you ever need a different build.
+  let repo = ($env.UNCLOUD_FORK_REPO? | default "psviderski/uncloud")
+  # Pin an explicit upstream release for reproducibility (bump when verified).
+  let ver = ($env.UNCLOUD_FORK_VERSION? | default "v0.19.0")
   print $"==> Installing the uncloud CLI from ($repo) @ ($ver)..."
   if (which uc | is-not-empty) {
     print $"    uc already present at (which uc | get path.0) — skipping."

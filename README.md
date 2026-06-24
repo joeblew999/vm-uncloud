@@ -2,9 +2,9 @@
 
 [Uncloud](https://github.com/psviderski/uncloud) cluster on a Hetzner VPS, on your own Cloudflare domain. Create it, deploy apps, tear it down. The only tool you install is [`mise`](https://mise.jdx.dev).
 
-> ⚠️ **This runs OUR FORKS of uncloud + corrosion, NOT upstream.** See
-> [Forks we depend on](#forks-we-depend-on--do-not-use-upstream) before touching
-> the stack — mixing in upstream silently breaks provisioning.
+> Runs **upstream** [psviderski/uncloud](https://github.com/psviderski/uncloud) —
+> no forks. See [Upstream, no forks](#upstream-no-forks) for the one local
+> accommodation (a PTY wrapper for headless `uc machine init`).
 
 ```bash
 mise install      # opentofu, hcloud, nushell, fnox
@@ -14,35 +14,25 @@ mise run deploy   # deploy compose.yaml
 mise run down     # destroy everything
 ```
 
-## Forks we depend on — DO NOT use upstream
+## Upstream, no forks
 
-vm-uncloud runs **two of our forks**, not the upstream projects. They are
-**chained**, so mixing in an upstream binary or image silently breaks the stack.
+vm-uncloud runs **upstream `psviderski/uncloud`** directly — pinned to a release
+in `setup.nu` (`UNCLOUD_FORK_VERSION`, default `v0.19.0`; override the repo with
+`UNCLOUD_FORK_REPO`). Upstream `uncloudd` already defaults corrosion to a
+**multi-arch image** — `ghcr.io/unlabs-dev/corrosion` (amd64 **and** arm64) — so
+ARM boxes work out of the box.
 
-| Fork | Branch | Upstream | Role | Pin |
-|---|---|---|---|---|
-| **[joeblew999/uncloud](https://github.com/joeblew999/uncloud)** | `joeblew999` | `psviderski/uncloud` (our base **v0.20** is ahead of upstream stable v0.19) | the `uc` CLI + `uncloudd` daemon | release **`v0.20.0-jb.3`** (pinned in `setup.nu`; override `UNCLOUD_FORK_VERSION`) |
-| **[joeblew999/corrosion](https://github.com/joeblew999/corrosion)** | `joeblew999` | `psviderski/corrosion` (rebased on **superfly v1.0.0** + uncloud patches; upstream now at `v2026.6.15`) | CRDT gossip-SQLite store `uncloudd` runs as a **container** | **`ghcr.io/joeblew999/corrosion:v1.0.0-jb.1`** |
+We **used to** carry forks of uncloud + corrosion. They turned out to be solving
+non-problems (2026-06-24): upstream corrosion builds arm64 natively now and
+publishes an arm64 image, and the one real patch (headless `uc machine init`) is
+handled by a shell wrapper, not code:
 
-**The chain (why you can't mix):** `mise run setup` installs **our** `uc`
-(`UNCLOUD_FORK_REPO`, default `joeblew999/uncloud`). Our `uc` embeds our
-`install.sh`, so `uc machine init` installs **our** `uncloudd` over SSH — and our
-`uncloudd` defaults corrosion to **our** image. Use upstream `uc` and you get
-upstream `uncloudd` + upstream corrosion → the fork patches (arm64
-jemalloc/GLIBC, the headless `add.go`/`init.go` fixes) disappear and provisioning
-breaks. **Never `go install`/`brew install` upstream uncloud here, or repoint
-corrosion at `psviderski/corrosion`.**
-
-**Fork-points** (env overrides; default = ours — leave them unless you're testing):
-
-| Var | Controls | Default |
-|---|---|---|
-| `UNCLOUD_FORK_REPO` | repo `mise run setup` installs `uc` from | `joeblew999/uncloud` |
-| `UNCLOUD_GITHUB_URL` / `UNCLOUD_GITHUB_REPO` | where `uncloudd` / the CLI install from | ours |
-| `UNCLOUD_CORROSION_IMAGE` | the corrosion container image | `ghcr.io/joeblew999/corrosion:v1.0.0-jb.1` |
-
-**Keep the corrosion ghcr package PUBLIC** so `uncloudd` pulls it anonymously.
-New fork builds are cut with `cliff:release` inside each fork repo.
+**The one local accommodation:** upstream's `uc machine init/add` readiness
+spinner (bubbletea) opens `/dev/tty`, so it dies in a non-interactive shell (CI,
+agents, `mise run up`). `scripts/up.nu` wraps it in a PTY (`script -q /dev/null …`
+on macOS, `script -qec` on Linux) — verified to work. Upstream closed
+[psviderski/uncloud#386](https://github.com/psviderski/uncloud/issues/386) as
+not-reproducible, so the wrapper stays rather than a fork.
 
 ## Setup
 

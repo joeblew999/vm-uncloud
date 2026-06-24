@@ -10,9 +10,19 @@ use r2.nu *
 
 const TOFU = ["-chdir=tofu"]
 
-# (Removed the with-pty wrapper: our uncloud fork's `uc machine init/add` now
-# falls back to plain output when stdout isn't a TTY, so no PTY is needed and
-# errors aren't swallowed. The fix is in joeblew999/uncloud add.go/init.go.)
+# `uc machine init/add`'s readiness spinner opens /dev/tty directly, so it dies
+# in a shell with no controlling terminal (CI, agents) even with -y. Give it a
+# PTY. macOS/BSD: `script -q /dev/null <cmd…>`; Linux: `script -qec "<cmd>" /dev/null`.
+# (We run UPSTREAM psviderski/uncloud now — its bubbletea spinner needs a TTY;
+# upstream closed #386 as not-reproducible, and the PTY wrapper is the clean
+# workaround, so we keep it rather than carry a fork.)
+def with-pty [cmd: list<string>] {
+  if $nu.os-info.name == "macos" {
+    ^script -q /dev/null ...$cmd
+  } else {
+    ^script -qec ($cmd | str join " ") /dev/null
+  }
+}
 
 # --context selects a node class with ISOLATED state: a tofu workspace named
 # <context> + tofu/<context>.tfvars + an uncloud context of the same name. Omit
@@ -87,10 +97,10 @@ def main [--context: string = ""] {
     let mname = $"($ctx)-($row.index + 1)"
     if $row.index == 0 {
       print $"==> uc machine init root@($ip) --context ($ctx) --name ($mname) --no-dns"
-      ^uc machine init $"root@($ip)" --context $ctx --name $mname --no-dns ...$caddy_flag -i $key -y
+      with-pty (["uc" "machine" "init" $"root@($ip)" "--context" $ctx "--name" $mname "--no-dns"] ++ $caddy_flag ++ ["-i" $key "-y"])
     } else {
       print $"==> uc machine add root@($ip) --context ($ctx) --name ($mname)"
-      ^uc machine add $"root@($ip)" --context $ctx --name $mname -i $key -y
+      with-pty ["uc" "machine" "add" $"root@($ip)" "--context" $ctx "--name" $mname "-i" $key "-y"]
     }
   }
 
