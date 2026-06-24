@@ -3,7 +3,7 @@
 # interactive `fnox set -p keychain` for any missing token (like secrets:set),
 # validates the Vultr key against the API, then enumerates the non-secret picks.
 # Idempotent: already-set items are skipped. Run interactively:
-#   mise run win-kvm:onboard
+#   mise run vultr:onboard      (opens the API dashboard, sets+validates the key)
 
 def has-secret [name: string] {
   (do { ^fnox get $name } | complete).exit_code == 0
@@ -45,6 +45,10 @@ def main [] {
   # 1. VULTR_API_KEY — SET it (if missing) then VALIDATE -----------------------
   print "1) Vultr API key  —  https://my.vultr.com/settings/#settingsapi"
   print "   (enable API access + add your public IP to the access-control list)"
+  if not (has-secret "VULTR_API_KEY") {
+    # Drop the user straight on the API settings page so they can copy the key.
+    do { ^nu scripts/open.nu "https://my.vultr.com/settings/#settingsapi" } | ignore
+  }
   ensure-secret "VULTR_API_KEY" | ignore
   if not (has-secret "VULTR_API_KEY") { print -e "✗ no VULTR_API_KEY — stopping"; exit 1 }
   let valid = ((do { ^fnox exec --if-missing ignore -- vultr-cli account } | complete).exit_code == 0)

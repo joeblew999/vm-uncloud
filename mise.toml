@@ -521,6 +521,14 @@ dir = "{{config_root}}"
 # Secrets — one-time keychain population. Run these once per machine.
 #   mise run secrets:set   then paste each token.
 # ---------------------------------------------------------------------------
+[tasks."vultr:dashboard"]
+description = "Open the Vultr API-keys dashboard page in your browser (to copy your key)"
+run = "nu scripts/open.nu 'https://my.vultr.com/settings/#settingsapi'"
+
+[tasks."vultr:onboard"]
+description = "Onboard Vultr: opens the API dashboard, then sets + validates VULTR_API_KEY in the keychain (+ ssh/region picks)"
+run = "nu scripts/vultr-onboard.nu"
+
 [tasks."secrets:set"]
 description = "Seed HCLOUD_TOKEN + CLOUDFLARE_API_TOKEN in the keychain (skip if already set)"
 run = """
