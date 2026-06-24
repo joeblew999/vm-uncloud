@@ -171,7 +171,6 @@ mise run caddy:external
 ## Troubleshooting
 
 - **No cert** — `docker logs $(docker ps -qf name=caddy) | grep -i acme`. Caddy must be `caddybuilds/caddy-cloudflare` with `CLOUDFLARE_API_TOKEN` set.
-- **`could not open TTY`** — run from a real terminal, not CI.
 - **`context not found`** — must match `$UNCLOUD_CONTEXT` (`hetzner`); `mise run up` sets it.
 
 ## Virtual desktops (Windows)
