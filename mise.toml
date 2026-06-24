@@ -30,9 +30,10 @@ hcloud   = "1.65.0"
 "aqua:nushell/nushell" = "0.113.1"
 # Web GUI control plane (gui/server/serve.nu): http-nu serves it, xs is the
 # event bus, pitchfork supervises both as daemons. joeblew999 forks add iroh
-# relay support (FS sync across clones).
-"github:joeblew999/http-nu" = "0.16.0-relay-url.3"
-"github:joeblew999/xs"      = "0.12.0-relay-url.3"
+# relay support (FS sync across clones) — now folded into the clean v0.17.0
+# releases (the old `-relay-url.N` prerelease tags are deprecated).
+"github:joeblew999/http-nu" = "0.17.0"
+"github:joeblew999/xs"      = "0.17.0"
 # yoke — one LLM agent turn as a unix pipe; powers `ai:ask`. Same ecosystem.
 "github:cablehead/yoke"     = "0.4.1"
 # aws-cli — ONLY for the win-kvm R2 snapshot transit (Vultr has no hot-snapshot).
