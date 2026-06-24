@@ -522,6 +522,13 @@ dir = "{{config_root}}"
 # Secrets — one-time keychain population. Run these once per machine.
 #   mise run secrets:set   then paste each token.
 # ---------------------------------------------------------------------------
+[tasks."ghcr:token"]
+description = "Open the GitHub PAT page (write:packages prescoped) + set GHCR_TOKEN in the keychain — needed to push the corrosion fork image to ghcr"
+run = '''
+nu scripts/open.nu 'https://github.com/settings/tokens/new?scopes=write:packages&description=GHCR+corrosion+image+push'
+fnox get GHCR_TOKEN >/dev/null 2>&1 && echo "GHCR_TOKEN: already set" || fnox set -p keychain GHCR_TOKEN
+'''
+
 [tasks."vultr:dashboard"]
 description = "Open the Vultr API-keys dashboard page in your browser (to copy your key)"
 run = "nu scripts/open.nu 'https://my.vultr.com/settings/#settingsapi'"
