@@ -18,7 +18,15 @@
       # authorization_code = browser login. Pick what the app uses.
       flows: ["authorization_code", "client_credentials", "password"]
       scopes: ["openid", "profile", "groups", "email"]
-      redirect_uris: ["https://id.amplifycms.com/auth/v1/oidc/callback"]
+      # redirect_uris = where Rauthy sends the browser back AFTER login (the
+      # APP's callback route, NOT Rauthy's own). One per app/origin that uses
+      # the PKCE redirect flow (kit `loginWithRedirect`); add your deployed app
+      # URLs here. Passkeys/MFA happen on Rauthy's hosted page during this flow.
+      redirect_uris: [
+        "http://localhost:5173/callback"   # vite dev (real browser)
+        "http://localhost:5175/callback"   # vite dev (http, headless tools)
+        "https://id.amplifycms.com/auth/v1/oidc/callback"  # Rauthy's own account UI
+      ]
     }
   ]
   # Roles available for assignment (admin already exists by default in Rauthy).
