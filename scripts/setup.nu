@@ -10,7 +10,12 @@ def main [] {
   # to joeblew999/uncloud) and our corrosion-image default — so the whole stack
   # runs off our forks with no further config. Override repo with UNCLOUD_FORK_REPO.
   let repo = ($env.UNCLOUD_FORK_REPO? | default "joeblew999/uncloud")
-  print $"==> Installing the uncloud CLI from ($repo)..."
+  # PINNED — fork tags use a `-jb.N` PRERELEASE suffix, which semver-sorts BELOW
+  # the base version, so "latest" resolution is unreliable (a stray plain tag
+  # would outrank it). Always pin an explicit tag for reproducibility. Bump this
+  # when a newer fork release is verified. Override with UNCLOUD_FORK_VERSION.
+  let ver = ($env.UNCLOUD_FORK_VERSION? | default "v0.20.0-jb.3")
+  print $"==> Installing the uncloud CLI from ($repo) @ ($ver)..."
   if (which uc | is-not-empty) {
     print $"    uc already present at (which uc | get path.0) — skipping."
   } else {
@@ -18,7 +23,7 @@ def main [] {
     let arch = (if ($nu.os-info.arch | str contains "aarch64") or ($nu.os-info.arch | str contains "arm64") { "arm64" } else { "amd64" })
     let asset = $"uncloud_($os)_($arch).tar.gz"
     let tmp = (mktemp -d)
-    ^gh release download --repo $repo --pattern $asset --dir $tmp
+    ^gh release download $ver --repo $repo --pattern $asset --dir $tmp
     ^tar -xzf $"($tmp)/($asset)" -C $tmp
     let bindir = $"($nu.home-dir)/.local/bin"
     mkdir $bindir

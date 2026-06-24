@@ -21,8 +21,8 @@ vm-uncloud runs **two of our forks**, not the upstream projects. They are
 
 | Fork | Branch | Upstream | Role | Pin |
 |---|---|---|---|---|
-| **[joeblew999/uncloud](https://github.com/joeblew999/uncloud)** | `joeblew999` | `psviderski/uncloud` | the `uc` CLI + `uncloudd` daemon | release **`v0.20.0-jb.1`** |
-| **[joeblew999/corrosion](https://github.com/joeblew999/corrosion)** | `joeblew999` | `psviderski/corrosion` (rebased on **superfly v1.0.0** + uncloud patches) | CRDT gossip-SQLite store `uncloudd` runs as a **container** | **`ghcr.io/joeblew999/corrosion:v1.0.0-jb.1`** |
+| **[joeblew999/uncloud](https://github.com/joeblew999/uncloud)** | `joeblew999` | `psviderski/uncloud` (our base **v0.20** is ahead of upstream stable v0.19) | the `uc` CLI + `uncloudd` daemon | release **`v0.20.0-jb.3`** (pinned in `setup.nu`; override `UNCLOUD_FORK_VERSION`) |
+| **[joeblew999/corrosion](https://github.com/joeblew999/corrosion)** | `joeblew999` | `psviderski/corrosion` (rebased on **superfly v1.0.0** + uncloud patches; upstream now at `v2026.6.15`) | CRDT gossip-SQLite store `uncloudd` runs as a **container** | **`ghcr.io/joeblew999/corrosion:v1.0.0-jb.1`** |
 
 **The chain (why you can't mix):** `mise run setup` installs **our** `uc`
 (`UNCLOUD_FORK_REPO`, default `joeblew999/uncloud`). Our `uc` embeds our

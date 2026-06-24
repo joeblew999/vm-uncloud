@@ -16,18 +16,18 @@ includes = [
 ]
 
 [tools]
-opentofu = "1.12.1"
+opentofu = "1.12.3"
 hcloud   = "1.65.0"
 # fnox — the secret client every task uses (`fnox exec`/`fnox get` inject keychain
 # secrets). Pinned so `mise install` provides it automatically; same version the
 # orangevault repo uses. Without this it had to be installed out-of-band.
-"github:jdx/fnox" = "1.24"
+"github:jdx/fnox" = "1.27.1"
 # orangevault-cli — auto-provisions the dedicated dev/CI OrangeVault account
 # (register + mint API key) for dev:secrets:set. Pure-Rust, multi-OS release.
 "github:joeblew999/orangevault" = "0.1.1"
 # nushell — pinned so `mise install` provides the `nu` every script + the CI parse
 # checks run on (gui/serve.nu, connect/*, scripts/*, recipe prepare.nu).
-"aqua:nushell/nushell" = "0.111.0"
+"aqua:nushell/nushell" = "0.113.1"
 # Web GUI control plane (gui/server/serve.nu): http-nu serves it, xs is the
 # event bus, pitchfork supervises both as daemons. joeblew999 forks add iroh
 # relay support (FS sync across clones).
@@ -36,7 +36,7 @@ hcloud   = "1.65.0"
 # yoke — one LLM agent turn as a unix pipe; powers `ai:ask`. Same ecosystem.
 "github:cablehead/yoke"     = "0.4.1"
 # aws-cli — ONLY for the win-kvm R2 snapshot transit (Vultr has no hot-snapshot).
-aws                         = "2.30.4"
+aws                         = "2.35.11"
 # vultr-cli — provisions the win-kvm Vultr Bare Metal node (vultr-{up,init,down,
 # snapshot}.nu call it via `fnox exec`). Reads VULTR_API_KEY natively.
 "ubi:vultr/vultr-cli"       = "latest"
