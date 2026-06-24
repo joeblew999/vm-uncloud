@@ -2,8 +2,8 @@
 # vm-uncloud — one-command Uncloud cluster on Hetzner with your own Cloudflare domain.
 #
 # Flow:  mise run setup   (once)  -> install the uncloud CLI locally
-#        mise run up               -> tofu apply (Hetzner box + Cloudflare DNS) + uc machine init
-#        mise run deploy           -> uc deploy compose.yaml
+#        mise run up               -> tofu apply (Hetzner box + Cloudflare DNS) + uncloud machine init
+#        mise run deploy           -> uncloud deploy compose.yaml
 #        mise run down             -> tofu destroy (server + DNS records, clean)
 #
 # Secrets come from fnox (keychain) -> mise tasks. Never hand-edit a .env / .tfvars file.
@@ -18,6 +18,12 @@ includes = [
 [tools]
 opentofu = "1.12.3"
 hcloud   = "1.65.0"
+# uncloud — the `uncloud` CLI (UPSTREAM psviderski/uncloud; we dropped our fork).
+# A REAL mise tool now: `mise install` provides it, no out-of-band binary in
+# /usr/local/bin. Scripts call `uncloud` (the binary name; the old `uc` symlink
+# is gone). `uncloud machine init` installs uncloudd over SSH; it defaults
+# corrosion to ghcr.io/unlabs-dev/corrosion (multi-arch). Bump deliberately.
+"github:psviderski/uncloud" = "0.19.0"
 # fnox — the secret client every task uses (`fnox exec`/`fnox get` inject keychain
 # secrets). Pinned so `mise install` provides it automatically; same version the
 # orangevault repo uses. Without this it had to be installed out-of-band.
@@ -43,7 +49,7 @@ aws                         = "2.35.11"
 "ubi:vultr/vultr-cli"       = "latest"
 
 [env]
-# Cluster context name `uc` uses.
+# Cluster context name `uncloud` uses.
 UNCLOUD_CONTEXT = "hetzner"
 TF_IN_AUTOMATION = "1"
 # Web GUI control plane.
@@ -75,10 +81,10 @@ ORANGEVAULT_DEV_DOMAIN = "https://orangevault.gedw99.workers.dev"
 
 # ---------------------------------------------------------------------------
 # Setup — install the two LOCAL binaries Uncloud needs. Everything server-side
-# is pushed over SSH by `uc machine init`, so this is all that runs on your box.
+# is pushed over SSH by `uncloud machine init`, so this is all that runs on your box.
 # ---------------------------------------------------------------------------
 [tasks.setup]
-description = "Install the uncloud CLI (uc) locally"
+description = "Ensure tools are installed (mise) + print next steps"
 run = "nu scripts/setup.nu"
 
 # ---------------------------------------------------------------------------
@@ -95,7 +101,7 @@ description = "Deploy services from compose.yaml to the cluster"
 run = "fnox exec --if-missing ignore -- nu scripts/deploy.nu"
 
 [tasks.push]
-description = "Ship local Docker images to the cluster (uc build --push, or: mise run push <image>)"
+description = "Ship local Docker images to the cluster (uncloud build --push, or: mise run push <image>)"
 run = "nu scripts/push.nu"
 
 [tasks.down]
@@ -298,7 +304,7 @@ env = { WIN_PROVIDER = "vultr" }
 run = "nu connect/ip.nu"
 
 [tasks."win-kvm:init"]
-description = "Join the booted Vultr BM to the win-kvm uncloud context (uc machine init)."
+description = "Join the booted Vultr BM to the win-kvm uncloud context (uncloud machine init)."
 run = "fnox exec --if-missing ignore -- nu scripts/vultr-init.nu"
 
 [tasks."win-kvm:deploy"]

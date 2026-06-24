@@ -12,8 +12,8 @@ def main [] {
     print "       record + cert already cover them, so no per-host DNS setup is needed."
     exit 1
   }
-  print $"==> uc caddy deploy --caddyfile ($snippet)"
-  ^uc caddy deploy --caddyfile $snippet
+  print $"==> uncloud caddy deploy --caddyfile ($snippet)"
+  ^uncloud caddy deploy --caddyfile $snippet
   print ""
-  print "Merged config now serving. Inspect it with: uc caddy config"
+  print "Merged config now serving. Inspect it with: uncloud caddy config"
 }

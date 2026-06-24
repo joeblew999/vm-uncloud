@@ -10,7 +10,7 @@
 #   (Ubuntu 24.04), VULTR_SSH_KEY_ID. List options: `vultr-cli regions/plans/os list`.
 #
 # Vultr BM is async (IP assigned after a few min). This creates it and prints
-# the next steps; `win-kvm:init` runs `uc machine init` once the IP is up.
+# the next steps; `win-kvm:init` runs `uncloud machine init` once the IP is up.
 
 def need [k: string] {
   if (($env | get -o $k | default "") | is-empty) {
@@ -31,6 +31,6 @@ def main [] {
   print ""
   print "Vultr BM provisioning started (async, ~5-10 min to boot). Next:"
   print "  mise run win-kvm:ip       # poll until an IP is assigned"
-  print "  mise run win-kvm:init     # uc machine init root@<ip> --context win-kvm"
+  print "  mise run win-kvm:init     # uncloud machine init root@<ip> --context win-kvm"
   print "  mise run win-kvm:deploy   # recipe windows-kvm onto it"
 }

@@ -10,7 +10,7 @@
 #   mise run recipe:local rauthy --down   # down + remove volumes (reset state)
 #
 # vs the remote path:
-#   mise run recipe rauthy                # uc deploy onto the cluster
+#   mise run recipe rauthy                # uncloud deploy onto the cluster
 #
 # Secrets come from the recipe's prepare.nu in THROWAWAY mode (VMU_SECRET_DRY=1):
 # local data is ephemeral dev state, never your persisted cluster secrets.

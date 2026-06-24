@@ -10,7 +10,7 @@ use r2.nu *
 
 const TOFU = ["-chdir=tofu"]
 
-# `uc machine init/add`'s readiness spinner opens /dev/tty directly, so it dies
+# `uncloud machine init/add`'s readiness spinner opens /dev/tty directly, so it dies
 # in a shell with no controlling terminal (CI, agents) even with -y. Give it a
 # PTY. macOS/BSD: `script -q /dev/null <cmd…>`; Linux: `script -qec "<cmd>" /dev/null`.
 # (We run UPSTREAM psviderski/uncloud now — its bubbletea spinner needs a TTY;
@@ -70,15 +70,15 @@ def main [--context: string = ""] {
   if ($domain | is-not-empty) { print $"==> Wildcard: ($wildcard) -> ($ips | get 0)" }
 
   let key = ($out.ssh_private_key_file.value | path expand)
-  # Load the key into the ssh-agent so `uc machine init` can key-auth as root.
+  # Load the key into the ssh-agent so `uncloud machine init` can key-auth as root.
   # A fresh shell/agent may be empty → init silently hangs on a password prompt.
   # Idempotent (re-adding an already-loaded key is a no-op).
   do { ^ssh-add $key } | complete | ignore
-  # Clear stale host keys (Hetzner recycles IPs) so client-side `uc machine init`
+  # Clear stale host keys (Hetzner recycles IPs) so client-side `uncloud machine init`
   # doesn't trip on a mismatched known_hosts entry. One-shot, not a poll.
   for ip in $ips { ^ssh-keygen -R $ip out+err> /dev/null }
 
-  # Context name MUST match $UNCLOUD_CONTEXT — `uc machine init` does NOT read
+  # Context name MUST match $UNCLOUD_CONTEXT — `uncloud machine init` does NOT read
   # that env var (it defaults the new context to "default"), so we pass it
   # explicitly. Otherwise deploy/recipe/down would look for a context the init
   # step never created.
@@ -90,17 +90,17 @@ def main [--context: string = ""] {
   let caddy_flag = (if ($domain | is-empty) { [] } else { ["--no-caddy"] })
 
   # First node initialises the cluster; the rest join the WireGuard mesh.
-  # Our uncloud fork falls back to plain output when stdout isn't a TTY, so no PTY
-  # wrapper is needed and errors surface normally (vs the old `script` swallow).
+  # Wrapped in with-pty so the readiness spinner gets a controlling terminal
+  # (upstream uncloud's bubbletea spinner opens /dev/tty and dies headless).
   $ips | enumerate | each {|row|
     let ip = $row.item
     let mname = $"($ctx)-($row.index + 1)"
     if $row.index == 0 {
-      print $"==> uc machine init root@($ip) --context ($ctx) --name ($mname) --no-dns"
-      with-pty (["uc" "machine" "init" $"root@($ip)" "--context" $ctx "--name" $mname "--no-dns"] ++ $caddy_flag ++ ["-i" $key "-y"])
+      print $"==> uncloud machine init root@($ip) --context ($ctx) --name ($mname) --no-dns"
+      with-pty (["uncloud" "machine" "init" $"root@($ip)" "--context" $ctx "--name" $mname "--no-dns"] ++ $caddy_flag ++ ["-i" $key "-y"])
     } else {
-      print $"==> uc machine add root@($ip) --context ($ctx) --name ($mname)"
-      with-pty ["uc" "machine" "add" $"root@($ip)" "--context" $ctx "--name" $mname "-i" $key "-y"]
+      print $"==> uncloud machine add root@($ip) --context ($ctx) --name ($mname)"
+      with-pty ["uncloud" "machine" "add" $"root@($ip)" "--context" $ctx "--name" $mname "-i" $key "-y"]
     }
   }
 
@@ -111,7 +111,7 @@ def main [--context: string = ""] {
   # not web, so no Caddy ingress.
   if ($wildcard | is-not-empty) {
     print $"==> Deploying wildcard Caddy \(DNS-01 cert for ($wildcard)\)"
-    with-env { DOMAIN: $domain } { ^uc deploy -f caddy/compose.yaml -y }
+    with-env { DOMAIN: $domain } { ^uncloud deploy -f caddy/compose.yaml -y }
   }
 
   # Record an 'up' event in the ledger (best-effort). Omit --fqdns when empty:
@@ -126,7 +126,7 @@ def main [--context: string = ""] {
   print "Cluster is up. Next:"
   if ($domain | is-not-empty) {
     print $"  publish any subdomain — it resolves \(($wildcard)\) and gets the wildcard cert instantly:"
-    print $"  uc run -p app.($domain):8000/https traefik/whoami"
+    print $"  uncloud run -p app.($domain):8000/https traefik/whoami"
   }
   print "  mise run deploy    # apply compose.yaml"
   print "  mise run status"

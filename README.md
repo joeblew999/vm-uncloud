@@ -16,9 +16,10 @@ mise run down     # destroy everything
 
 ## Upstream, no forks
 
-vm-uncloud runs **upstream `psviderski/uncloud`** directly — pinned to a release
-in `setup.nu` (`UNCLOUD_FORK_VERSION`, default `v0.19.0`; override the repo with
-`UNCLOUD_FORK_REPO`). Upstream `uncloudd` already defaults corrosion to a
+vm-uncloud runs **upstream `psviderski/uncloud`** directly. The `uncloud` CLI is
+a normal **mise tool** — `[tools]` → `github:psviderski/uncloud` (pinned, bump
+deliberately) — so `mise install` provides it; no out-of-band binary in
+`/usr/local/bin`. Upstream `uncloudd` already defaults corrosion to a
 **multi-arch image** — `ghcr.io/unlabs-dev/corrosion` (amd64 **and** arm64) — so
 ARM boxes work out of the box.
 

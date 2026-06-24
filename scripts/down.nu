@@ -1,7 +1,7 @@
 #!/usr/bin/env nu
 # Tear everything down: destroys the Hetzner server(s) + any Cloudflare DNS
 # records this repo created, then prunes the now-dead local uncloud context
-# (there's no `uc ctx rm`, so we edit the config file directly).
+# (there's no `uncloud ctx rm`, so we edit the config file directly).
 #
 # Non-interactive: set FORCE=1 (or UNCLOUD_AUTO_CONFIRM=1) to skip the prompt.
 

@@ -19,11 +19,11 @@ def main [] {
 
   print ""
   print "=== Machines (uncloud) ==="
-  ^uc machine ls
+  ^uncloud machine ls
 
   print ""
   print "=== Services (uncloud) ==="
-  ^uc ls
+  ^uncloud ls
 
   print ""
   print "=== History (state/log.jsonl, last 10) ==="

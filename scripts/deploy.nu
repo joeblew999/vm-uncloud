@@ -3,7 +3,7 @@
 #
 # Injects DOMAIN from the cluster's single source of truth (tofu/terraform.tfvars,
 # read via tofu state) so compose files use ${DOMAIN} instead of a hardcoded host.
-# `uc deploy` also builds any `build:` services locally and pushes them.
+# `uncloud deploy` also builds any `build:` services locally and pushes them.
 
 use r2.nu *
 use cluster.nu *
@@ -17,8 +17,8 @@ def main [] {
   let dom = (cluster-domain)
   let envs = (if ($dom | is-empty) { {} } else { { DOMAIN: $dom } })
   if ($dom | is-not-empty) { print $"==> DOMAIN=($dom)" }
-  print "==> uc deploy -f compose.yaml"
-  with-env $envs { ^uc deploy -f compose.yaml }
+  print "==> uncloud deploy -f compose.yaml"
+  with-env $envs { ^uncloud deploy -f compose.yaml }
   print ""
   print "Deployed. Check status with: mise run status"
 }

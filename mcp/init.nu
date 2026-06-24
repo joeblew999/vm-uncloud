@@ -4,13 +4,13 @@
 #
 # Friendly read-only views over the vm-uncloud control plane — the AI/MCP actor
 # gets the same picture as the web GUI, by calling these instead of memorising
-# hcloud/uc/tofu invocations. All shell out (no module resolution issues).
+# hcloud/uncloud/tofu invocations. All shell out (no module resolution issues).
 
 # Hetzner nodes (all contexts).
 def uncloud-nodes [] { ^fnox exec --if-missing ignore -- hcloud server list -o json | from json }
 
 # uncloud services on the current context.
-def uncloud-services [] { ^uc ls }
+def uncloud-services [] { ^uncloud ls }
 
 # Hetzner snapshots (Windows state images, etc.).
 def uncloud-snapshots [] { ^fnox exec --if-missing ignore -- hcloud image list --type snapshot -o json | from json }
