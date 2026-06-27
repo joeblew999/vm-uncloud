@@ -136,6 +136,14 @@ run = "fnox exec --if-missing ignore -- nu scripts/recipe-deploy.nu"
 description = "Run a recipe locally via docker compose (e.g. rauthy) — DRY with the remote `recipe` task"
 run = "nu scripts/recipe-local.nu"
 
+# moq local demo — relay (docker) + web UI (vite) + optional Big Buck Bunny pub,
+# all orchestrated in recipes/moq/demo.nu. The moq web UI isn't a published image
+# (only the relay/CLIs are), so it runs under bun; the relay/publisher are the
+# moqdev/* containers. Usage: mise run moq:demo -- <up|down|pub|status>.
+[tasks."moq:demo"]
+description = "Local moq demo: relay (docker) + web UI on :5173. Usage: mise run moq:demo -- <up|down|pub|status>"
+run = "nu recipes/moq/demo.nu"
+
 # ---------------------------------------------------------------------------
 # Hidden tasks — used by tooling/verification, not part of the day-to-day flow.
 # Still runnable by name (mise run tofu:plan), just not listed in `mise tasks`.
