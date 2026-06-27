@@ -96,11 +96,11 @@ def main [--context: string = ""] {
     let ip = $row.item
     let mname = $"($ctx)-($row.index + 1)"
     if $row.index == 0 {
-      print $"==> uncloud machine init root@($ip) --context ($ctx) --name ($mname) --no-dns"
-      with-pty (["uncloud" "machine" "init" $"root@($ip)" "--context" $ctx "--name" $mname "--no-dns"] ++ $caddy_flag ++ ["-i" $key "-y"])
+      print $"==> uc machine init root@($ip) --context ($ctx) --name ($mname) --no-dns"
+      with-pty (["uc" "machine" "init" $"root@($ip)" "--context" $ctx "--name" $mname "--no-dns"] ++ $caddy_flag ++ ["-i" $key "-y"])
     } else {
-      print $"==> uncloud machine add root@($ip) --context ($ctx) --name ($mname)"
-      with-pty ["uncloud" "machine" "add" $"root@($ip)" "--context" $ctx "--name" $mname "-i" $key "-y"]
+      print $"==> uc machine add root@($ip) --context ($ctx) --name ($mname)"
+      with-pty ["uc" "machine" "add" $"root@($ip)" "--context" $ctx "--name" $mname "-i" $key "-y"]
     }
   }
 
@@ -111,7 +111,7 @@ def main [--context: string = ""] {
   # not web, so no Caddy ingress.
   if ($wildcard | is-not-empty) {
     print $"==> Deploying wildcard Caddy \(DNS-01 cert for ($wildcard)\)"
-    with-env { DOMAIN: $domain } { ^uncloud deploy -f caddy/compose.yaml -y }
+    with-env { DOMAIN: $domain } { ^uc deploy -f caddy/compose.yaml -y }
   }
 
   # Record an 'up' event in the ledger (best-effort). Omit --fqdns when empty:
@@ -126,7 +126,7 @@ def main [--context: string = ""] {
   print "Cluster is up. Next:"
   if ($domain | is-not-empty) {
     print $"  publish any subdomain — it resolves \(($wildcard)\) and gets the wildcard cert instantly:"
-    print $"  uncloud run -p app.($domain):8000/https traefik/whoami"
+    print $"  uc run -p app.($domain):8000/https traefik/whoami"
   }
   print "  mise run cluster:deploy    # apply compose.yaml"
   print "  mise run cluster:status"

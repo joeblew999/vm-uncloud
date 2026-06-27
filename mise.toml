@@ -18,12 +18,14 @@ includes = [
 [tools]
 opentofu = "1.12.3"
 hcloud   = "1.65.0"
-# uncloud — the `uncloud` CLI (UPSTREAM psviderski/uncloud; we dropped our fork).
-# A REAL mise tool now: `mise install` provides it, no out-of-band binary in
-# /usr/local/bin. Scripts call `uncloud` (the binary name; the old `uc` symlink
-# is gone). `uncloud machine init` installs uncloudd over SSH; it defaults
-# corrosion to ghcr.io/unlabs-dev/corrosion (multi-arch). Bump deliberately.
-"github:psviderski/uncloud" = "0.19.0"
+# uncloud — the CLI (UPSTREAM psviderski/uncloud; we dropped our fork). A REAL mise
+# tool: `mise install` provides it, no out-of-band binary in /usr/local/bin. As of
+# v0.20.0 the CLI binary is `uc` (was `uncloud`); scripts call `^uc`. The daemon
+# binary `uncloudd` is unchanged; `uc machine init/add` installs it over SSH. v0.20
+# moved Corrosion to a managed Docker container (auto-migrates). Bump deliberately:
+# the gRPC proxy format changed, so CLI + all cluster machines must be the same
+# major — upgrade while no cluster is running, or re-init.
+"github:psviderski/uncloud" = "0.20.0"
 # fnox — the secret client every task uses (`fnox exec`/`fnox get` inject keychain
 # secrets). Pinned so `mise install` provides it automatically; same version the
 # orangevault repo uses. Without this it had to be installed out-of-band.

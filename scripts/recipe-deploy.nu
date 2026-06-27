@@ -88,8 +88,8 @@ def main [recipe?: string, --context: string = ""] {
 
   # Target a specific uncloud cluster when --context is given (else the current).
   let ctx_flag = (if ($context | is-not-empty) { [--context $context] } else { [] })
-  print $"==> uncloud deploy -f ($compose) ($ctx_flag | str join ' ') -y"
-  with-env $envs { ^uncloud deploy -f $compose ...$ctx_flag -y }
+  print $"==> uc deploy -f ($compose) ($ctx_flag | str join ' ') -y"
+  with-env $envs { ^uc deploy -f $compose ...$ctx_flag -y }
 
   let cluster = (if ($context | is-not-empty) { $context } else { ($env.UNCLOUD_CONTEXT? | default "") })
   do {

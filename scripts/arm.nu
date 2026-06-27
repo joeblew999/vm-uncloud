@@ -144,7 +144,7 @@ def "main adopt" [location: string, --context: string = "", --ssh-key: string = 
   if ($context | is-not-empty) { $flags = ($flags | append [-c $context]) }
   if ($ssh_key | is-not-empty) { $flags = ($flags | append [-i $ssh_key]) }
   print $"==> adopting ($server) at ($ip) into the cluster as machine ($server) ..."
-  ^uncloud machine add $"root@($ip)" -n $server ...$flags -y
+  ^uc machine add $"root@($ip)" -n $server ...$flags -y
   print $"✓ ($server) joined the cluster. Evict but keep the box: mise run arm:evict -- ($location)"
 }
 
@@ -157,7 +157,7 @@ def "main evict" [location: string, --context: string = ""] {
   mut flags = []
   if ($context | is-not-empty) { $flags = ($flags | append [-c $context]) }
   print $"==> evicting ($server) from the cluster — the Hetzner server stays \(still billing\) ..."
-  ^uncloud machine rm $server ...$flags -y
+  ^uc machine rm $server ...$flags -y
   print $"✓ ($server) left the cluster; box retained. Re-adopt: mise run arm:adopt -- ($location). Delete: mise run arm:release -- ($location)"
 }
 

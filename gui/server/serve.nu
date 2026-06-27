@@ -67,7 +67,7 @@ def nodes-render [] {
 
 # uncloud services on the current context.
 def services-render [] {
-    let out = (^uncloud ls | complete)
+    let out = (^uc ls | complete)
     if $out.exit_code != 0 {
         return $"<aside><em>uncloud unavailable: <code>(html-esc ($out.stderr | str trim))</code></em></aside>"
     }

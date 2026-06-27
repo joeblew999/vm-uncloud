@@ -9,11 +9,11 @@
 
 def main [image?: string] {
   if ($image | is-empty) {
-    print "==> uncloud build --push   (building Compose services locally + pushing to the cluster)"
-    ^uncloud build --push
+    print "==> uc build --push   (building Compose services locally + pushing to the cluster)"
+    ^uc build --push
   } else {
-    print $"==> uncloud image push ($image)"
-    ^uncloud image push $image
+    print $"==> uc image push ($image)"
+    ^uc image push $image
   }
   print ""
   print "Pushed. Reference the image in compose.yaml and: mise run cluster:deploy"

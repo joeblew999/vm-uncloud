@@ -17,8 +17,8 @@ def main [] {
   let dom = (cluster-domain)
   let envs = (if ($dom | is-empty) { {} } else { { DOMAIN: $dom } })
   if ($dom | is-not-empty) { print $"==> DOMAIN=($dom)" }
-  print "==> uncloud deploy -f compose.yaml"
-  with-env $envs { ^uncloud deploy -f compose.yaml }
+  print "==> uc deploy -f compose.yaml"
+  with-env $envs { ^uc deploy -f compose.yaml }
   print ""
   print "Deployed. Check status with: mise run cluster:status"
 }

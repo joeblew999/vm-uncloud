@@ -7,9 +7,9 @@ def main [] {
   if ($ip | is-empty) { print -e "no IP yet — the BM is still booting (try win-kvm:ip again)"; exit 1 }
   let key = ($env.VULTR_SSH_KEY_FILE? | default "~/.ssh/id_ed25519" | path expand)
   ^ssh-keygen -R $ip out+err> /dev/null
-  print $"==> uncloud machine init root@($ip) --context win-kvm --no-dns --no-caddy"
+  print $"==> uc machine init root@($ip) --context win-kvm --no-dns --no-caddy"
   # PTY-wrap so the readiness spinner survives a non-TTY shell (uncloud#386).
-  let cmd = ["uncloud" "machine" "init" $"root@($ip)" "--context" "win-kvm" "--name" "win-kvm-1" "--no-dns" "--no-caddy" "-i" $key "-y"]
+  let cmd = ["uc" "machine" "init" $"root@($ip)" "--context" "win-kvm" "--name" "win-kvm-1" "--no-dns" "--no-caddy" "-i" $key "-y"]
   if $nu.os-info.name == "macos" { ^script -q /dev/null ...$cmd } else { ^script -qec ($cmd | str join " ") /dev/null }
   print "win-kvm node joined. Next: mise run win-kvm:deploy"
 }
