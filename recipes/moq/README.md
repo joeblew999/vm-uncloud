@@ -12,6 +12,27 @@ Runs the **official prebuilt image** `moqdev/moq-relay` (multi-arch amd64 +
 **arm64**, so it runs on `cax` ARM nodes too) — no fork, no build, consistent
 with the run-upstream-containers policy.
 
+## Try it locally
+
+The whole stack runs on your box via [`demo.nu`](demo.nu) — relay + publisher as
+upstream containers, web UI under bun, no host tools:
+
+```bash
+mise run moq:demo -- up       # relay (docker) + web UI on http://localhost:5173
+mise run moq:demo -- pub      # stream Big Buck Bunny in (ffmpeg + moq-cli containers)
+mise run moq:demo -- status   # relay + web state
+mise run moq:demo -- down     # stop + remove everything (web, relay, publisher)
+```
+
+Then open **http://localhost:5173/watch.html** (Chrome/Edge, or Safari 26.4+ —
+needs WebTransport). `publish.html` streams your camera/screen; `stats.html` shows
+relay stats. First `up` clones moq into `.src/moq` (gitignored) and `bun install`s
+the web app; everything else (relay, ffmpeg, moq-cli) is a container.
+
+> **Known upstream flake:** `pub` sometimes publishes only the audio track (video
+> stays 0 fps) — moq-cli's draft fmp4 importer logs `mp4a::esds: PLEASE FIX`.
+> Re-run `pub` to recover. This is upstream `moq-lite`, not the recipe.
+
 ## ⚠ Status: SCAFFOLD — not yet deploy-verified
 
 The compose + `prepare.nu` are a good-faith starting point. moq-relay isn't a
