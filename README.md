@@ -17,7 +17,7 @@ mise run cluster:deploy                                          # deploy compos
 mise run cluster:down                                            # destroy everything
 ```
 
-Secrets stay in the keychain via `fnox`, never on disk. TLS is one `*.<domain>` wildcard cert via Cloudflare DNS-01 — any subdomain just works. (`scripts/cluster-up.nu` gives `uncloud machine init` a PTY so it runs headless — CI/agents too.)
+Secrets stay in the keychain via `fnox`, never on disk. TLS is one `*.<domain>` wildcard cert via Cloudflare DNS-01 — any subdomain just works. (`scripts/cluster-up.nu` gives `uc machine init` a PTY + retry so it runs headless — CI/agents too.)
 
 ## Config — `tofu/terraform.tfvars`
 
@@ -116,7 +116,7 @@ mise run state:remote  # move tofu state to Cloudflare R2 (durable, lockable)
 > for the ephemeral win nodes, but there's no clean "remove just one recipe, keep
 > the node + its other services" yet. Tracked upstream: uncloud
 > [#369](https://github.com/psviderski/uncloud/issues/369) (`uncloud undeploy` / an
-> "app" = compose-file concept). Until then, per-recipe removal is `uncloud rm <service>`.
+> "app" = compose-file concept). Until then, per-recipe removal is `uc rm <service>`.
 
 ## Prices
 
