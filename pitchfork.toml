@@ -11,3 +11,11 @@ retry = 5
 [daemons.gui]
 run = "mise run gui:serve"
 retry = 5
+
+# arm-watch — poll Hetzner every 5s and AUTO-GRAB cax (ARM) the moment any EU site
+# restocks (→ billing per grab; bounded to one box per location). Supervised so it
+# stays alive across sessions/crashes, unlike an ephemeral background task.
+# Start/stop: `mise run arm:watch:up` / `arm:watch:down`.
+[daemons.arm-watch]
+run = "mise run arm:watch -- cax11"
+retry = 10

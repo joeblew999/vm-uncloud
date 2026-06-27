@@ -554,7 +554,7 @@ fnox get CLOUDFLARE_API_TOKEN >/dev/null 2>&1 && echo "CLOUDFLARE_API_TOKEN: alr
 
 # ── ARM (cax) capacity: check availability + secure boxes before they sell out ─
 [tasks."arm:check"]
-description = "Show Hetzner ARM (cax) availability across ALL locations (EU often sold out; US/Singapore may have stock)."
+description = "Show Hetzner ARM (cax) availability (EU-only: nbg1/hel1/fsn1, often sold out; US/SIN offer no ARM)."
 run = "fnox exec --if-missing ignore -- nu scripts/arm.nu check"
 
 [tasks."arm:grab"]
@@ -568,6 +568,18 @@ run = "fnox exec --if-missing ignore -- nu scripts/arm.nu secure"
 [tasks."arm:watch"]
 description = "Watch + auto-grab cax in any location the moment it has stock (leave running). Usage: mise run arm:watch -- [size]"
 run = "fnox exec --if-missing ignore -- nu scripts/arm.nu watch"
+
+# Supervised (pitchfork) variants so the watch survives sessions/crashes — same
+# relationship as gui:up/down ↔ gui:serve. arm:watch:up auto-grabs cax11 (billing).
+[tasks."arm:watch:up"]
+description = "Start the supervised ARM watcher (pitchfork, 5s poll, auto-grabs cax11 → billing)."
+run = "pitchfork start arm-watch"
+dir = "{{config_root}}"
+
+[tasks."arm:watch:down"]
+description = "Stop the supervised ARM watcher."
+run = "pitchfork stop arm-watch"
+dir = "{{config_root}}"
 
 [tasks."arm:release"]
 description = "Delete a secured cax box. Usage: mise run arm:release -- <location>"

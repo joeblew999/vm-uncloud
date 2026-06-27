@@ -69,7 +69,7 @@ def "main secure" [size: string = "cax11"] {
 # main watch — poll until cax appears in a location, then grab it (and keep
 # grabbing new locations as they free up). This is "secure them for me": leave it
 # running and it snaps up ARM the moment Hetzner has stock. COSTS MONEY per grab.
-def "main watch" [size: string = "cax11", --interval: int = 60] {
+def "main watch" [size: string = "cax11", --interval: int = 5] {
   print $"==> watching for ($size); grabbing in any location with stock every ($interval)s. Ctrl-C to stop."
   loop {
     # A single transient API/DNS hiccup must NOT kill a watch meant to run for
