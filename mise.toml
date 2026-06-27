@@ -557,6 +557,10 @@ fnox get CLOUDFLARE_API_TOKEN >/dev/null 2>&1 && echo "CLOUDFLARE_API_TOKEN: alr
 description = "Show Hetzner ARM (cax) availability (EU-only: nbg1/hel1/fsn1, often sold out; US/SIN offer no ARM)."
 run = "fnox exec --if-missing ignore -- nu scripts/arm.nu check"
 
+[tasks."arm:list"]
+description = "List the cax boxes we currently hold (arm-reserve-*) — name, type, DC, IP, status."
+run = "fnox exec --if-missing ignore -- nu scripts/arm.nu list"
+
 [tasks."arm:grab"]
 description = "Secure ONE cax box in a location (creates + keeps it → billing). Usage: mise run arm:grab -- <location> [size]"
 run = "fnox exec --if-missing ignore -- nu scripts/arm.nu grab"

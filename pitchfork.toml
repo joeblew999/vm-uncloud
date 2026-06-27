@@ -13,9 +13,10 @@ run = "mise run gui:serve"
 retry = 5
 
 # arm-watch — poll Hetzner every 5s and AUTO-GRAB cax (ARM) the moment any EU site
-# restocks (→ billing per grab). Hard cap: `--max 1` (grabs ONE box total, then
-# idles; bump the number for more). Supervised so it stays alive across
+# restocks (→ billing per grab). Hard cap: `--max 3` = one box in EACH of the 3 EU
+# sites (nbg1/hel1/fsn1, the only places ARM exists), then idles. Each grab is
+# recorded in the ledger (state/log.jsonl). Supervised so it stays alive across
 # sessions/crashes. Start/stop: `mise run arm:watch:up` / `arm:watch:down`.
 [daemons.arm-watch]
-run = "mise run arm:watch -- cax11 --max 1"
+run = "mise run arm:watch -- cax11 --max 3"
 retry = 10

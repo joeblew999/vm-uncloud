@@ -27,8 +27,8 @@ def "main deploy" [--cluster: string, --service: string, --host: string = ""] {
   append { event: deploy, cluster: $cluster, service: $service, host: $host }
 }
 
-def "main down" [--cluster: string] {
-  append { event: down, cluster: $cluster }
+def "main down" [--cluster: string, --location: string = "", --server-type: string = ""] {
+  append { event: down, cluster: $cluster, location: $location, server_type: $server_type }
 }
 
 def main [] {
