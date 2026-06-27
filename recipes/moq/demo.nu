@@ -7,17 +7,20 @@
 # prepare.nu; THIS is the local dev/demo path.
 #
 #   mise run moq:demo -- up      # relay (docker) + web UI -> http://localhost:5173/publish.html
-#   mise run moq:demo -- pub     # publish Big Buck Bunny into the relay (needs ffmpeg)
+#   mise run moq:demo -- pub     # publish Big Buck Bunny into the relay (ffmpeg in a container)
 #   mise run moq:demo -- status
 #   mise run moq:demo -- down
 #
-# Needs: docker (OrbStack) + bun (mise tool). pub also needs ffmpeg.
+# Needs ONLY docker (OrbStack) + bun (mise tool). No host ffmpeg — the publisher
+# runs ffmpeg as a container too (run-containers policy, end to end).
 
 const RELAY = "moq-relay"
 const WEB = "moq-web"             # pitchfork daemon name for the Vite server
 const SRC = ".src/moq"            # upstream clone (gitignored, like the recipe catalog)
 const PORT = "5173"
 const RELAY_URL = "http://localhost:4443"
+const CLI_IMG = "moqdev/moq-cli"
+const FFMPEG_IMG = "mwader/static-ffmpeg:7.1"   # multi-arch (amd64 + arm64), ffmpeg = entrypoint
 
 def ensure-src [] {
   if not ($SRC | path exists) {
@@ -66,8 +69,13 @@ def "main up" [] {
 
 def "main down" [] {
   ^pitchfork stop $WEB | complete | ignore
+  # Stop any publisher containers left by `pub` (ffmpeg + moq-cli), then the relay.
+  for img in [$CLI_IMG $FFMPEG_IMG] {
+    let ids = (^docker ps -q --filter $"ancestor=($img)" | lines | where {|x| ($x | str trim) | is-not-empty })
+    if ($ids | is-not-empty) { ^docker rm -f ...$ids | complete | ignore }
+  }
   ^docker rm -f $RELAY | complete | ignore
-  print "moq demo stopped: relay container + web daemon down."
+  print "moq demo stopped: publisher + relay containers + web daemon down."
 }
 
 def "main status" [] {
@@ -76,29 +84,28 @@ def "main status" [] {
   for l in (^pitchfork list | complete | get stdout | lines | where {|l| $l | str contains $WEB }) { print $"  ($l)" }
 }
 
-# Publish a fragmented test video into the relay via the moq-cli CONTAINER. ffmpeg
-# (host) remuxes to CMAF fMP4 and pipes to `moqdev/moq-cli publish`. Default Big
-# Buck Bunny; pass `tos` for Tears of Steel.
+# Publish a fragmented test video into the relay — NO host tools: ffmpeg runs as a
+# container too, remuxing to CMAF fMP4 on stdout, piped into the moq-cli container.
+# Default Big Buck Bunny; pass `tos` for Tears of Steel. Loops forever (Ctrl-C).
 def "main pub" [name: string = "bbb"] {
   ensure-src
-  if (which ffmpeg | is-empty) {
-    print -e "✗ ffmpeg not on PATH. Install it: brew install ffmpeg   (then re-run)."
-    exit 1
-  }
-  let media = ($env.PWD | path join $SRC "demo/pub/media" $"($name).mp4")
+  let mediadir = ($env.PWD | path join $SRC "demo/pub/media")
+  let media = ($mediadir | path join $"($name).mp4")
   if not ($media | path exists) {
-    mkdir ($media | path dirname)
+    mkdir $mediadir
     print $"==> downloading ($name).mp4 from vid.moq.dev"
     ^curl -fsSL $"https://vid.moq.dev/($name).mp4" -o $media
   }
   print $"==> publishing ($name).hang into ($RELAY_URL)   [Ctrl-C to stop]"
-  ^bash -c $"ffmpeg -hide_banner -v error -stream_loop -1 -re -i '($media)' -c copy -f mp4 -movflags cmaf+separate_moof+delay_moov+skip_trailer+frag_every_frame - | docker run -i --network host moqdev/moq-cli publish --url ($RELAY_URL) --name ($name).hang fmp4"
+  # ffmpeg container (reads the mounted media) | moq-cli container (--network host
+  # so localhost:4443 = the relay; the cert is generated for localhost).
+  ^bash -c $"docker run --rm -i -v '($mediadir)':/media ($FFMPEG_IMG) -hide_banner -v error -stream_loop -1 -re -i /media/($name).mp4 -c copy -f mp4 -movflags cmaf+separate_moof+delay_moov+skip_trailer+frag_every_frame - | docker run -i --network host ($CLI_IMG) publish --url ($RELAY_URL) --name ($name).hang fmp4"
 }
 
 def main [] {
   print "usage: mise run moq:demo -- <up|down|pub|status>"
   print "  up      relay (docker) + web UI -> http://localhost:5173/publish.html"
-  print "  pub     publish Big Buck Bunny into the relay (needs ffmpeg)"
+  print "  pub     publish Big Buck Bunny into the relay (ffmpeg in a container)"
   print "  status  show relay + web state"
   print "  down    stop everything"
 }
