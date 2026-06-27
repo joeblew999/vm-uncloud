@@ -569,6 +569,14 @@ run = "fnox exec --if-missing ignore -- nu scripts/arm.nu grab"
 description = "Secure one cax box in EVERY location that has stock right now (billing!). Usage: mise run arm:secure -- [size]"
 run = "fnox exec --if-missing ignore -- nu scripts/arm.nu secure"
 
+[tasks."arm:adopt"]
+description = "Adopt a held cax box INTO the uncloud cluster (uncloud machine add). Usage: mise run arm:adopt -- <location> [--context X] [--ssh-key path]"
+run = "fnox exec --if-missing ignore -- nu scripts/arm.nu adopt"
+
+[tasks."arm:evict"]
+description = "Remove a cax box from the cluster but KEEP the Hetzner server (re-adoptable). Usage: mise run arm:evict -- <location> [--context X]"
+run = "fnox exec --if-missing ignore -- nu scripts/arm.nu evict"
+
 [tasks."arm:watch"]
 description = "Watch + auto-grab cax up to --max boxes (default 1), then idle. Usage: mise run arm:watch -- [size] [--max N] [--interval S]"
 run = "fnox exec --if-missing ignore -- nu scripts/arm.nu watch"

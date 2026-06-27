@@ -9,10 +9,16 @@
 # "sold out" everywhere is the normal, correct state, not a bug. The watch polls
 # every datacenter and grabs the instant any EU site restocks.
 #
+# Lifecycle of a scarce box: grab → adopt ⇄ evict (keep the box) → release.
+# Hetzner is the SSOT for what we hold (`arm:list`); no local record is kept.
+#
 #   mise run arm:check                 # availability matrix, all locations
+#   mise run arm:list                  # the cax boxes we hold right now (from Hetzner)
 #   mise run arm:grab -- <loc> [size]  # secure ONE box in a location (costs money)
 #   mise run arm:secure -- [size]      # secure one box in EVERY available location
-#   mise run arm:release -- <loc>      # delete a secured box
+#   mise run arm:adopt -- <loc>        # join a held box INTO the uncloud cluster
+#   mise run arm:evict -- <loc>        # remove from cluster but KEEP the box (re-adoptable)
+#   mise run arm:release -- <loc>      # DELETE a secured box (stops billing)
 #   mise run arm:release-all           # delete all secured boxes
 
 const SSH_KEY = "gedw99_hetzner"   # matches tofu var ssh_key_name
@@ -122,6 +128,37 @@ def "main release-all" [] {
   let boxes = (^hcloud server list -o json | from json | where name =~ '^arm-reserve-' | get name)
   if ($boxes | is-empty) { print "no secured arm boxes."; return }
   for b in $boxes { ^hcloud server delete $b; print $"✓ released ($b)" }
+}
+
+# main adopt — join a held cax box INTO the uncloud cluster (uncloud machine add):
+# SSH in as root, install the daemon, join the WireGuard mesh. The box stays a
+# Hetzner server we own; this only makes it a cluster member. Requires an existing
+# cluster (run `cluster:up` first) whose context is configured locally.
+# ⚠ UNVERIFIED end-to-end — wired from the documented `machine add` flags but not
+# yet run against a live cluster + held box (ARM has been sold out).
+def "main adopt" [location: string, --context: string = "", --ssh-key: string = ""] {
+  let server = $"arm-reserve-($location)"
+  let ip = (try { ^hcloud server ip $server | str trim } catch { "" })
+  if ($ip | is-empty) { print -e $"✗ no held box ($server) — grab one first \(see arm:list\)."; exit 1 }
+  mut flags = []
+  if ($context | is-not-empty) { $flags = ($flags | append [-c $context]) }
+  if ($ssh_key | is-not-empty) { $flags = ($flags | append [-i $ssh_key]) }
+  print $"==> adopting ($server) at ($ip) into the cluster as machine ($server) ..."
+  ^uncloud machine add $"root@($ip)" -n $server ...$flags -y
+  print $"✓ ($server) joined the cluster. Evict but keep the box: mise run arm:evict -- ($location)"
+}
+
+# main evict — remove a cax box from the cluster but KEEP the Hetzner server, so
+# you keep the scarce ARM capacity. `uncloud machine rm` resets the box (re-adopt
+# any time). To actually delete the server and stop billing, use `arm:release`.
+# ⚠ UNVERIFIED end-to-end (see adopt).
+def "main evict" [location: string, --context: string = ""] {
+  let server = $"arm-reserve-($location)"
+  mut flags = []
+  if ($context | is-not-empty) { $flags = ($flags | append [-c $context]) }
+  print $"==> evicting ($server) from the cluster — the Hetzner server stays \(still billing\) ..."
+  ^uncloud machine rm $server ...$flags -y
+  print $"✓ ($server) left the cluster; box retained. Re-adopt: mise run arm:adopt -- ($location). Delete: mise run arm:release -- ($location)"
 }
 
 def main [] { main check }
