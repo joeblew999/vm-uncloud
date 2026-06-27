@@ -6,7 +6,7 @@
 #
 # Dedicated (Hetzner Robot) lives in state/prices-hetzner-dedicated.jsonl (prices:refresh:hetzner-dedicated);
 # everything static (storage/egress/software + non-Hetzner compute) in
-# state/prices-static.jsonl. See docs/PLACEMENT.md for which node class runs what.
+# state/prices-static.jsonl. See README (Node classes) for which node class runs what.
 #
 # Dry-run by default (prints the catalog); --write persists. Net prices, monthly
 # 2dp / hourly 4dp. Conventions: `^hcloud ... -o json | from json`, jsonl one

@@ -4,7 +4,7 @@
 # the viewer; no injected secret. Deploy onto a /dev/kvm node.
 #
 # ⚠️ macOS on non-Apple hardware violates Apple's EULA — see compose.yaml /
-# docs/github-ci.md before any shared/public use.
+# README (Checks) before any shared/public use.
 
 def main [] {
   let dom = ($env.DOMAIN? | default "")

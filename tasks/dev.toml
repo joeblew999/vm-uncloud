@@ -55,7 +55,7 @@ description = "Run a project mise task ON the dev node: mise run uncloud:dev:exe
 usage = 'arg "<task>" var=#true'
 # If the project ships a fnox.toml, the remote task runs under `fnox exec` so its
 # secrets resolve (from OrangeVault via the dev container's unlocked session — see
-# docs/DEVCONTAINERS.md "Secrets"). Otherwise it runs plain.
+# README (Remote dev) "Secrets"). Otherwise it runs plain.
 run = '''
 set -eu
 : "${DEV_HOST:?set DEV_HOST in mise.local.toml (the dev node)}"

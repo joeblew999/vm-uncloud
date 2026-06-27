@@ -1,23 +1,73 @@
 # vm-uncloud
 
-[Uncloud](https://github.com/psviderski/uncloud) cluster on a Hetzner VPS, on your own Cloudflare domain. Create it, deploy apps, tear it down. The only tool you install is [`mise`](https://mise.jdx.dev).
+An [Uncloud](https://github.com/psviderski/uncloud) cluster on Hetzner, on your own
+Cloudflare domain. Create it, deploy apps to `*.<domain>`, tear it down. The only
+thing you install is [`mise`](https://mise.jdx.dev) — it provides every other tool,
+including the `uc` CLI.
 
-Runs **upstream** [psviderski/uncloud](https://github.com/psviderski/uncloud) — no forks. The `uncloud` CLI is a mise tool, so `mise install` provides it.
+Runs **upstream** uncloud (v0.20, binary `uc`) and upstream images — no forks. One
+tool, one provisioning idiom (OpenTofu + `fnox` keychain secrets), one cost ledger.
 
-## Setup
+## Quickstart
 
-Need: a Cloudflare zone + token (`Zone:DNS:Edit`), a Hetzner project + SSH key.
+You need a Cloudflare zone + API token (`Zone:DNS:Edit`) and a Hetzner project + SSH key.
 
 ```bash
-mise install                                             # all tools, incl. the uncloud CLI
+mise install                                             # all tools, incl. the uc CLI
 cp tofu/terraform.tfvars.example tofu/terraform.tfvars   # domain, cloudflare_zone_id, ssh_key_name
-mise run secrets:set                                     # tokens -> keychain
-mise run cluster:up                                              # server + wildcard DNS + cluster
-mise run cluster:deploy                                          # deploy compose.yaml
-mise run cluster:down                                            # destroy everything
+mise run secrets:set                                     # tokens -> macOS keychain (via fnox)
+mise run cluster:up                                      # Hetzner box + wildcard DNS + cluster
+mise run cluster:deploy                                  # deploy compose.yaml
+mise run cluster:down                                    # destroy everything
 ```
 
-Secrets stay in the keychain via `fnox`, never on disk. TLS is one `*.<domain>` wildcard cert via Cloudflare DNS-01 — any subdomain just works. (`scripts/cluster-up.nu` gives `uc machine init` a PTY + retry so it runs headless — CI/agents too.)
+Secrets live in the keychain, never on disk. TLS is one `*.<domain>` wildcard cert
+via Cloudflare DNS-01, so any subdomain just works. `cluster:up` runs `uc machine
+init` under a PTY + retry, so it works headless (CI, agents) too.
+
+## Layout
+
+The thing that's confusing at first is that almost every folder is just the code
+behind a `mise` task. Here's the whole map.
+
+| Folder | What's in it |
+|---|---|
+| `scripts/` | The nu scripts behind every task — cluster/recipe/arm/prices/dev/win/vultr lifecycle. One script per concern. |
+| `recipes/` | One folder per deployable service: `compose.yaml` + optional `prepare.nu`. **Each recipe has its own README.** |
+| `tofu/` | OpenTofu: provisions the Hetzner box(es), Cloudflare DNS, and the firewall. `terraform.tfvars` is your config. |
+| `caddy/` | The wildcard-cert ingress (DNS-01) + the caddyfile for fronting non-container hosts. |
+| `connect/` | Client-side helpers to reach a node — RDP, noVNC viewer, SSH, VS Code Remote. |
+| `gui/` | The read-only web status board — one http-nu script (`gui/server/serve.nu`). |
+| `state/` | The price catalogs and the deploy ledger (`*.jsonl`), plus the scripts that write them. |
+| `tasks/` | A shared mise task lib other repos `include` (the remote-dev loop). |
+| `mcp/` | MCP server config, so an LLM can call the nu tools. |
+| `tofu/`, `cloud-init/`, `templates/`, `r2/` | Provisioning templates + R2 state-backend helpers. |
+
+And the tasks, by namespace (`mise tasks` for the full list):
+
+| `mise run …` | Does |
+|---|---|
+| `cluster:*` | provision / deploy / push / status / teardown the always-on cluster |
+| `recipe:*` | deploy a service recipe — `recipe:deploy <name>` (remote) or `recipe:local <name>` |
+| `arm:*` | Hetzner ARM (cax) capacity — check / list / grab / watch / adopt / evict / release |
+| `prices:*` | refresh + show the price model |
+| `dev:*` | ephemeral remote **dev** node — compile/test on a box that matches the deploy target |
+| `win:*` · `win-kvm:*` | ephemeral **Windows** desktop node (Cloud TCG / bare-metal KVM) |
+| `gui:*` · `xs:*` | the web status board + its event bus |
+| `registry:*` · `ov-admin:*` | publish live service URLs into OrangeVault; admin client |
+| `secrets:*` | tokens → keychain |
+| `state:*` · `r2:*` | move tofu state into Cloudflare R2 (durable, lockable) |
+| `caddy:*` | front external (non-container) hosts through the ingress |
+| `turso:*` | the turso/libSQL recipe — see [`recipes/turso`](recipes/turso) |
+| `moq:demo` | local Media-over-QUIC demo — see [`recipes/moq`](recipes/moq) |
+| `cliff:*` | changelog / release intel |
+| `mcp:*` · `ai:*` | run the MCP server / ask an LLM |
+| `vultr:*` | Vultr bare-metal lifecycle (the `win-kvm` provider) |
+
+Status, honestly: `cluster:*`, `recipe:*`, `arm:*`, `prices:*`, `gui:*` are
+exercised. `dev:*` works; `win:*` (TCG) works; **`win-kvm:*`, `registry:*`, and
+`dev-win` are scaffolded** — they need a live run to verify (flagged in their
+sections below). Everything is nushell so it's OS-neutral and CI parse-checks it.
 
 ## Config — `tofu/terraform.tfvars`
 
@@ -25,7 +75,7 @@ Secrets stay in the keychain via `fnox`, never on disk. TLS is one `*.<domain>` 
 |---|---|---|
 | `domain` | — | your apex, e.g. `example.com` |
 | `cloudflare_zone_id` | — | Cloudflare dashboard sidebar |
-| `ssh_key_name` | — | an SSH key in your Hetzner project |
+| `ssh_key_name` | — | an SSH key already in your Hetzner project |
 | `node_count` | `1` | `3` for a mesh |
 | `server_type` | `cpx22` | `cax11` = ARM |
 | `location` | `fsn1` | `nbg1` `hel1` `ash` `hil` `sin` |
@@ -33,7 +83,7 @@ Secrets stay in the keychain via `fnox`, never on disk. TLS is one `*.<domain>` 
 
 ## Deploy
 
-Use `${DOMAIN}` in compose — never hardcode the host; `mise run cluster:deploy` injects it.
+Use `${DOMAIN}` in compose — never hardcode the host; `cluster:deploy` injects it.
 
 ```yaml
 services:
@@ -45,46 +95,94 @@ services:
 ```bash
 mise run cluster:deploy        # build + push changed layers + roll out
 mise watch cluster:deploy      # re-deploy on save
-mise run cluster:push [image]  # push only — built-in registry, no docker pull
+mise run cluster:push [image]  # push only — uc's built-in registry, no docker pull
 ```
 
-Building needs local Docker (e.g. OrbStack on a Mac); the push is `uncloud`'s own. Build arch must match the server: `cpx22` is x86, so build `linux/amd64` (set `platform: linux/amd64` on the service) — or use `cax11` ARM nodes to match an Apple-silicon Mac.
+Building needs local Docker (OrbStack on a Mac). Match the server arch: `cpx22` is
+x86, so build `linux/amd64` (`platform: linux/amd64`), or use `cax11` ARM nodes to
+match an Apple-silicon Mac.
+
+> **Teardown granularity:** `cluster:down` is whole-node (tofu destroy) — right for
+> the ephemeral nodes, but there's no clean "remove one recipe, keep the rest" yet
+> (uncloud [#369](https://github.com/psviderski/uncloud/issues/369)). For now,
+> per-service removal is `uc rm <service>`.
 
 ## Recipes
 
-Ready-to-run services in [`recipes/`](recipes/) (local first, then [`recipes.toml`](recipes.toml) upstream):
+A recipe is a folder under [`recipes/`](recipes/): `compose.yaml` + an optional
+`prepare.nu` that generates and persists its own secrets. Adding one touches no
+shared code. Each recipe documents itself in its own `README.md`.
 
 ```bash
-mise run recipe:deploy                  # list
+mise run recipe:deploy                  # list available
 mise run recipe:deploy wordpress        # WordPress + MariaDB
-mise run recipe:deploy imaginary        # libvips image API (h2non/imaginary)
 mise run recipe:deploy moltis           # self-hosted AI agent server
-mise run recipe:deploy windows          # Windows desktop (dockur/windows) — see Virtual desktops
-mise run recipe:deploy wordpress-galera # EXPERIMENTAL — multi-master (needs node_count >= 3)
+mise run recipe:deploy imaginary        # libvips image API
+mise run recipe:local rauthy            # run a recipe locally via plain docker compose
 ```
 
-A recipe is a folder: `compose.yaml` + optional `prepare.nu` (generates and persists its own secrets). Adding one touches no shared code.
+Recipes the repo ships beyond the built-ins: `moq` (Media over QUIC),
+`rauthy` (OIDC), `turso` (self-hosted libSQL/SQLite). Upstream recipe sources are
+listed in [`recipes.toml`](recipes.toml) and cloned on demand (`recipe:sync`).
 
-## Remote dev (Dev Containers)
+## Node classes
 
-Keep your repo on your Mac; compile/test it on a remote box that matches the
-deploy target (real `linux/amd64`, or real Windows). The dev environment is just
-a recipe — `dev-linux` (Dev Containers base + mise + sshd) or `dev-windows`
-(dockur + mise/git). Full guide: [`docs/DEVCONTAINERS.md`](docs/DEVCONTAINERS.md).
+One repo, one tool — but not one node. Workloads differ in size, burst, and
+whether they need real virtualization. Each ephemeral class is its **own uncloud
+context** (separate tofu state + `up`/`down`), independent of the live cluster.
+
+| Class | SKU | Virt | Lifecycle | For |
+|---|---|---|---|---|
+| **cluster** | Hetzner `cpx22` | container | always-on | web containers, Moltis. **Live.** |
+| **dev** | `cpx42`/`cax*` | container | ephemeral | remote dev container that matches the deploy target |
+| **win-batch** | `cpx42` | dockur **TCG** | ephemeral | Windows batch/unattended; ~10× slower than KVM, cheap |
+| **win-kvm** | Vultr bare metal | dockur **KVM** | ephemeral | interactive Windows. **Scaffolded** — needs a Vultr key + live run |
+| **dev-win** | `cpx42` | dockur TCG | ephemeral | remote dev on real Windows. **Experimental** |
+
+Hetzner **Cloud** has no `/dev/kvm` on any tier, so KVM-fast needs bare metal
+(Vultr hourly, or Hetzner Robot `ax*` with a 30-day minimum) — which the Cloud tofu
+provider can't reach. That's why `win-batch` is TCG and `win-kvm` is a separate
+path. Firewall: the cluster opens `22/80/443/51820`; each other class adds its own
+rule (Windows `:3389`, dev the SSH port), restricted to `ssh_allowed_ips`.
+
+## ARM capacity (`arm:*`)
+
+ARM (`cax`) is offered **only** in the 3 EU sites (nbg1/hel1/fsn1) and is frequently
+100% sold out. These tools grab it the moment it appears. Hetzner is the source of
+truth — no local record is kept.
 
 ```bash
-cp tofu/dev.tfvars.example tofu/dev.tfvars   # one-time
+mise run arm:check                 # availability (✓ available / ✗ sold out / — no ARM here)
+mise run arm:list                  # the cax boxes we hold (name, type, DC, IP, created)
+mise run arm:watch:up              # supervised watcher: 5s poll, AUTO-GRABS up to 1 per EU DC (max 3)
+mise run arm:watch:down            # stop it
+mise run arm:adopt -- <loc>        # join a held box INTO the cluster (uc machine add)
+mise run arm:evict -- <loc>        # remove from cluster but KEEP the box (re-adoptable)
+mise run arm:release-all           # delete the boxes (stops billing)
+```
+
+Lifecycle of a scarce box: **grab → adopt ⇄ evict → release**. The watcher runs
+under pitchfork so it survives sessions; it auto-grabs (spends money) the moment
+stock appears, capped at one box per EU DC.
+
+## Remote dev (`dev:*`)
+
+Keep your repo on your Mac; compile/test it on a box that matches the deploy target
+(real `linux/amd64`). The dev environment is just the `dev-linux` recipe (base +
+mise + sshd).
+
+```bash
+cp tofu/dev.tfvars.example tofu/dev.tfvars
 mise run dev:up        # provision a teardownable Linux dev node (dev context)
-mise run dev:deploy    # build + deploy the dev-linux recipe onto it
+mise run dev:deploy    # build + deploy dev-linux onto it
 mise run dev:ssh:wait  # wait for SSH, then:
-mise run dev:code      # VS Code Remote-SSH into /workspace   (or mise run dev:ssh)
+mise run dev:code      # VS Code Remote-SSH into /workspace   (or dev:ssh)
 mise run dev:down      # destroy when idle
 ```
 
-From a **project** repo, include the shared task lib (mise pulls just the one
-file, like `cliff.toml`) and drive the loop with your own build/test/release tasks.
-The shared tasks are namespaced `uncloud:dev:*` so they can't clash with the
-project's own tasks:
+From a **project** repo, include the shared task lib (mise pulls just the one file)
+and drive the loop with your own build/test tasks. The shared tasks are namespaced
+`uncloud:dev:*` so they can't clash:
 
 ```toml
 [task_config]
@@ -93,112 +191,97 @@ includes = ["git::https://github.com/joeblew999/vm-uncloud.git//tasks/dev.toml?r
 
 ```bash
 mise run uncloud:dev:build     # rsync the repo to the node + run its `mise run build` there
-mise run uncloud:dev:release   # ...build + docker + GitHub release, on the node
-mise run uncloud:dev:container # portable path: `devcontainer up` against the node's Docker
+mise run uncloud:dev:release   # build + docker + GitHub release, on the node
 ```
 
-Secrets come from a dedicated [OrangeVault](https://github.com/joeblew999/orangevault)
-account via fnox (`mise run dev:secrets:set` → `dev:secrets:check`), and deploys can
-register their live URLs back into OrangeVault so other systems discover them by
-name — see [`docs/DEVCONTAINERS.md`](docs/DEVCONTAINERS.md) (Secrets) and
-[`docs/REGISTRY.md`](docs/REGISTRY.md).
+Dev secrets come from a dedicated [OrangeVault](https://github.com/joeblew999/orangevault)
+account via fnox (`dev:secrets:set` → `dev:secrets:check`).
 
-## State
+## Windows desktops (`win:*`)
 
-```bash
-mise run cluster:status        # machines, services, history
-mise run state:remote  # move tofu state to Cloudflare R2 (durable, lockable)
-```
-
-`state/log.jsonl` is the up/deploy/down ledger (in git). `tofu` uses `HCLOUD_TOKEN` — verify infra with `fnox exec -- hcloud server list`, not bare `hcloud`.
-
-> **Teardown granularity:** `mise run cluster:down` is whole-node (tofu destroy) — right
-> for the ephemeral win nodes, but there's no clean "remove just one recipe, keep
-> the node + its other services" yet. Tracked upstream: uncloud
-> [#369](https://github.com/psviderski/uncloud/issues/369) (`uncloud undeploy` / an
-> "app" = compose-file concept). Until then, per-recipe removal is `uc rm <service>`.
-
-## Prices
-
-The price model — rate cards to size a node class per workload — lives in
-`state/prices-*.jsonl`, split by class, each a **live catalog** owned by its
-refresh task (run `--write` to persist). The incurred-cost ledger is separate
-(`state/log.jsonl`).
+`dockur/windows` is just a container, so it's an uncloud recipe — no bespoke
+lifecycle. It runs on its own dedicated, teardownable node (never on the cluster).
 
 ```bash
-mise run prices:show                       # all of them, merged, as a table
-mise run prices:refresh:hetzner-cloud      # state/prices-hetzner-cloud.jsonl      (VPS, hcloud API)
-mise run prices:refresh:hetzner-dedicated  # state/prices-hetzner-dedicated.jsonl  (new-order, Robot API)
-mise run prices:refresh:hetzner-auction    # state/prices-hetzner-auction.jsonl    (auction floor, Robot API)
-mise run prices:refresh:all                # regenerate + persist all of them
-```
-
-`prices-static.jsonl` holds the hand-maintained rest (storage, egress, software,
-vultr/equinix/local). The Robot feeds (dedicated/auction) need a web-service user
-(`HETZNER_ROBOT_USER`/`_PASSWORD` in the keychain — robot.hetzner.com → Settings →
-Web service). **Dedicated is two worlds:** new-order (current hardware, e.g.
-64 GB ≈ €187/mo) vs the **auction** floor (used, e.g. 64 GB ≈ €46/mo) — pick per
-how long-lived the box is.
-
-## Web GUI
-
-A browser status board (Hetzner nodes, uncloud services, snapshots, the price
-model, and the deploy ledger) served by http-nu + Datastar, supervised by
-pitchfork. Read-only today; actions (deploy/win lifecycle) are the next layer.
-
-```bash
-mise run gui:up      # start the GUI + xs event bus → http://127.0.0.1:8080
-mise run gui:down    # stop them
-mise run gui:serve   # foreground (hot-reloads on serve.nu edits)
-```
-
-`gui/server/serve.nu` is the whole app (one http-nu closure). Same stack as the
-old vm-servers board, pointed at uncloud/hcloud data instead of a single VM.
-
-## External services
-
-Front non-container hosts (BMC, HomeAssistant, NAS) through Caddy:
-
-```bash
-cp caddy/external.caddyfile.example caddy/external.caddyfile   # edit it
-mise run caddy:external
-```
-
-## Checks
-
-`mise run ci` (and every push, via [`.github/workflows/check.yml`](.github/workflows/check.yml)) — tofu fmt/validate, parse scripts, run each `prepare.nu`, parse composes.
-
-## Troubleshooting
-
-- **No cert** — `docker logs $(docker ps -qf name=caddy) | grep -i acme`. Caddy must be `caddybuilds/caddy-cloudflare` with `CLOUDFLARE_API_TOKEN` set.
-- **`context not found`** — must match `$UNCLOUD_CONTEXT` (`hetzner`); `mise run cluster:up` sets it.
-
-## Virtual desktops (Windows)
-
-This repo is the **single home for our Hetzner deployments** — one tool
-(uncloud), one provisioning idiom (tofu + `fnox` secrets), one cost ledger. That
-includes virtual desktops: **`dockur/windows` is just a container, so it runs as
-an uncloud recipe** — no bespoke parallel lifecycle.
-
-Windows is heavy + bursty, so it runs on its **own dedicated, teardownable node**
-(`win-batch` — a `cpx42` in its own tofu workspace + uncloud context), never on
-the always-on `cpx22` cluster. The whole cycle (`state/prices-*.jsonl` has pricing):
-
-```bash
-cp tofu/win-batch.tfvars.example tofu/win-batch.tfvars   # one-time
+cp tofu/win-batch.tfvars.example tofu/win-batch.tfvars
 mise run win:up           # provision the cpx42 Windows node (RDP :3389 opened)
-mise run win:deploy       # deploy dockur/windows onto it
-mise run win:rdp:wait     # wait until Windows finishes install (notifies)
+mise run win:deploy       # deploy dockur/windows
+mise run win:rdp:wait     # wait until install finishes (notifies)
 mise run win:rdp          # RDP in (user Docker / pass admin) — or win:viewer (noVNC tunnel)
 mise run win:down         # snapshot THEN destroy → stops billing; win:up restores
 ```
 
-`KVM=N` on Hetzner Cloud (TCG, ~5-10× slower). **KVM-fast = bare metal** via the
-`win-kvm:*` tasks (Vultr BM; Hetzner Cloud has no `/dev/kvm`) — scaffolded, needs
-a Vultr key + a first live run. See [`docs/PLACEMENT.md`](docs/PLACEMENT.md) for
-the node-class-per-workload map.
+`KVM=N` on Hetzner Cloud (TCG, ~5–10× slower). KVM-fast = bare metal via `win-kvm:*`
+(Vultr BM) — scaffolded, needs `VULTR_API_KEY` + a first live run. Vultr BM has no
+hot-snapshot, so `win-kvm:down` loses state today; for state-preserving on-demand
+Windows, use `win-batch` (Hetzner snapshot).
 
-Supersedes the old standalone [vm-servers](https://github.com/joeblew999/vm-servers)
-repo (bespoke hcloud + cloud-init lifecycle). Sibling
-[vm-software](https://github.com/joeblew999/vm-software) — the Windows installers
-that run *inside* the guest (different execution context, stays separate).
+## Service registry
+
+When a recipe deploys, `recipe:deploy` can record its public URL in OrangeVault as a
+Bitwarden login item, so any repo with the orangevault fnox provider resolves it by
+name — no bespoke discovery. DNS gives the address; OrangeVault gives the catalog +
+the secrets DNS can't.
+
+- name `vmu/<context>/<service>` (e.g. `vmu/hetzner/moltis`), `uri` = the live URL.
+- Opt in with `VMU_REGISTRY=1`; best-effort and self-guarding (no creds → no-op,
+  never breaks a deploy). **Experimental** — exercise the manual `registry:publish`/
+  `registry:list`/`registry:remove` tasks once before turning on auto-publish.
+
+```toml
+# a consumer project's fnox.toml
+MOLTIS_URL = { provider = "orangevault", value = "vmu/hetzner/moltis/uri" }
+```
+
+## State, prices, GUI
+
+```bash
+mise run cluster:status   # machines, services, history
+mise run state:remote     # move tofu state to Cloudflare R2 (durable, lockable)
+mise run prices:show      # the merged price model as a table
+mise run gui:up           # web status board -> http://127.0.0.1:8080  (gui:down to stop)
+```
+
+`state/log.jsonl` is the up/deploy/down ledger (in git). The price model is
+`state/prices-*.jsonl`, one live catalog per class, each owned by a refresh task
+(`prices:refresh:hetzner-cloud` from the hcloud API; `:hetzner-dedicated` and
+`:hetzner-auction` from the Robot API, needing `HETZNER_ROBOT_USER`/`_PASSWORD` in
+the keychain). Dedicated has two worlds: new-order (64 GB ≈ €187/mo) vs the auction
+floor (used, 64 GB ≈ €46/mo). `tofu` reads `HCLOUD_TOKEN` via fnox — verify infra
+with `fnox exec -- hcloud server list`, not bare `hcloud`.
+
+The GUI (`gui/server/serve.nu`, one http-nu + Datastar closure, supervised by
+pitchfork) shows nodes, services, snapshots, prices, and the ledger. Read-only today.
+
+## Gotchas
+
+- **uncloud is `uc` since v0.20** (binary renamed from `uncloud`; daemon stays
+  `uncloudd`). On a machine's first boot the daemon pulls the Corrosion **Docker
+  image**, which can exceed systemd's start timeout → `uc machine init/add` fail
+  once, the daemon auto-restarts and comes up. Intermittent — `cluster-up.nu` and
+  `arm.nu` retry through it. The gRPC proxy format changed in 0.20, so the CLI and
+  all machines must share a major; upgrade with no cluster running.
+- **uncloud appends a trailing `\n` to every injected env value.** Harmless except
+  for exact-match values — it broke the Cloudflare token for Caddy's DNS-01 (no
+  cert). Strip CR/LF in the consuming container (the caddy recipe does this with
+  `tr -d`). Upstream-tracked.
+- **`uc machine init`'s readiness spinner wants a TTY** — dies headless. The PTY
+  wrapper in `cluster-up.nu` fixes it ([#386](https://github.com/psviderski/uncloud/issues/386)).
+- **`ssh-add ~/.ssh/<key>` before `cluster:up`** if the agent is empty, or init
+  can't key-auth as root.
+- Run `cluster:up`/`down` from a **real terminal** (down prompts for the cluster
+  name unless `--yes`, and aborting leaves the box **billing** — delete, don't stop).
+
+## Checks
+
+`mise run ci` runs the same checks locally and in CI (every push, via
+`.github/workflows/check.yml`): tofu fmt/validate, parse every nu script, run each
+`prepare.nu`, parse the composes. Nushell is the scripting language throughout —
+chosen for OS-neutrality; no hardcoded paths, no bash-isms.
+
+---
+
+Supersedes the old [vm-servers](https://github.com/joeblew999/vm-servers) repo
+(bespoke hcloud + cloud-init lifecycle). Sibling
+[vm-software](https://github.com/joeblew999/vm-software) holds the Windows
+installers that run *inside* the guest.

@@ -1,7 +1,7 @@
 #!/usr/bin/env nu
 # ov-admin.nu — thin client for orangevault-admin's ConnectRPC AdminService. No
 # compiled binary needed: Connect speaks JSON over HTTP, so this just POSTs to
-# /orangevault_admin.v1.AdminService/<Method> (see docs/orangevault-admin.md).
+# /orangevault_admin.v1.AdminService/<Method> (see the orangevault-admin repo).
 #
 # Reads ORANGEVAULT_ADMIN_DOMAIN + ORANGEVAULT_ADMIN_TOKEN (bearer macaroon) from
 # fnox — the same keys the orangevault-admin repo uses. Guarded/best-effort.

@@ -5,7 +5,7 @@ One tool, one provisioning idiom (tofu + `fnox` keychain secrets), one cost
 ledger. Supersedes the old `vm-servers` repo (don't add a parallel lifecycle —
 everything is an uncloud recipe or a thin mise task over uncloud/tofu/hcloud).
 
-## Two workloads, two node classes (see `docs/PLACEMENT.md`)
+## Two workloads, two node classes (see the README — Node classes)
 
 - **cluster** — always-on Hetzner Cloud node (`cpx22`), runs many containers as
   recipes (Moltis, WordPress, …), each on a `*.<domain>` subdomain via one

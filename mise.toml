@@ -346,7 +346,7 @@ run = "fnox exec --if-missing ignore -- nu scripts/vultr-down.nu"
 # the deploy target. Same idiom as win:* — a teardownable node class in its own
 # context (tofu/dev.tfvars, tofu/dev-win.tfvars). Toolchains come from each
 # PROJECT's mise.toml; the project drives the loop via the shared tasks/dev.toml.
-# See docs/DEVCONTAINERS.md.
+# See README (Remote dev).
 #   mise run dev:up → dev:deploy → dev:ssh:wait → dev:code → ... → dev:down
 # ---------------------------------------------------------------------------
 [tasks."dev:up"]
@@ -405,7 +405,7 @@ run = "fnox exec --if-missing ignore -- nu scripts/cluster-down.nu --context dev
 
 # dev:secrets — wire the dev containers to OrangeVault (the running Bitwarden-compat
 # vault). The vault URL defaults from $ORANGEVAULT_DEV_DOMAIN; only the dedicated
-# dev/CI ACCOUNT creds need setting. See docs/DEVCONTAINERS.md "Secrets via OrangeVault".
+# dev/CI ACCOUNT creds need setting. See README (Remote dev) "Secrets via OrangeVault".
 [tasks."dev:secrets:set"]
 description = "Auto-provision the dedicated dev/CI OrangeVault account via orangevault-cli (register + mint API key → keychain). Idempotent."
 shell = "nu -c"
@@ -454,7 +454,7 @@ run = "nu scripts/dev-secrets-check.nu"
 # registry — publish "what's live" into OrangeVault so other systems discover it by
 # name (vmu/<context>/<service> with the URL in the `uri` field). recipe deploys
 # auto-publish when VMU_REGISTRY=1 (set it in mise.local.toml once verified); these
-# tasks exercise it manually first. See docs/REGISTRY.md.
+# tasks exercise it manually first. See README (Service registry).
 [tasks."registry:list"]
 description = "List live systems registered in OrangeVault (mise run registry:list [-- --context cluster])."
 run = "nu scripts/registry.nu list"
@@ -469,7 +469,7 @@ run = "nu scripts/registry.nu remove"
 
 # ov-admin — thin ConnectRPC client for orangevault-admin (JSON over HTTP; no
 # binary). Needs ORANGEVAULT_ADMIN_DOMAIN (+ _TOKEN for non-healthz). The admin
-# worker's auth is WIP — verify-on-first-use. See docs/orangevault-admin.md.
+# worker's auth is WIP — verify-on-first-use. See the orangevault-admin repo.
 [tasks."ov-admin:healthz"]
 description = "Ping orangevault-admin (ConnectRPC Healthz)."
 run = "nu scripts/ov-admin.nu healthz"
