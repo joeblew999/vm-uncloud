@@ -59,13 +59,19 @@ def "main secure" [size: string = "cax11"] {
 def "main watch" [size: string = "cax11", --interval: int = 60] {
   print $"==> watching for ($size); grabbing in any location with stock every ($interval)s. Ctrl-C to stop."
   loop {
-    let here = (cax-availability | where {|r| $size in $r.cax } | get location)
-    let have = (^hcloud server list -o json | from json | where name =~ '^arm-reserve-' | get name)
-    for loc in $here {
-      if not ($"arm-reserve-($loc)" in $have) {
-        print $"  [(date now | format date '%H:%M:%S')] ($size) appeared in ($loc) — grabbing!"
-        grab-one $loc $size
+    # A single transient API/DNS hiccup must NOT kill a watch meant to run for
+    # hours — log it and retry on the next tick.
+    try {
+      let here = (cax-availability | where {|r| $size in $r.cax } | get location)
+      let have = (^hcloud server list -o json | from json | where name =~ '^arm-reserve-' | get name)
+      for loc in $here {
+        if not ($"arm-reserve-($loc)" in $have) {
+          print $"  [(date now | format date '%H:%M:%S')] ($size) appeared in ($loc) — grabbing!"
+          grab-one $loc $size
+        }
       }
+    } catch {|e|
+      print $"  [(date now | format date '%H:%M:%S')] transient error — retrying in ($interval)s: ($e.msg)"
     }
     sleep ($interval * 1sec)
   }
