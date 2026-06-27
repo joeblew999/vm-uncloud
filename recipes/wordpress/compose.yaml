@@ -1,9 +1,9 @@
 # WordPress + MariaDB — the flagship demo. Published on https://wordpress.<your-domain>
 # using the cluster's wildcard cert (any subdomain just works). Deploy with:
 #
-#   mise run recipe wordpress        # WP_DOMAIN auto-derives to wordpress.<your-domain>
+#   mise run recipe:deploy wordpress        # WP_DOMAIN auto-derives to wordpress.<your-domain>
 #
-# DB credentials are generated and injected by scripts/recipe.nu — nothing secret
+# DB credentials are generated and injected by scripts/recipe-deploy.nu — nothing secret
 # is committed here. Adapted from psviderski/uncloud-recipes/wordpress-mariadb.
 services:
   mariadb:

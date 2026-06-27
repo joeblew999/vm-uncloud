@@ -20,5 +20,5 @@ def main [] {
   print "==> uncloud deploy -f compose.yaml"
   with-env $envs { ^uncloud deploy -f compose.yaml }
   print ""
-  print "Deployed. Check status with: mise run status"
+  print "Deployed. Check status with: mise run cluster:status"
 }

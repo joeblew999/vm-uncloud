@@ -6,7 +6,7 @@ R2 (box is disposable), JWT-authenticated, multi-database, with a rehearsable DR
 drill. Deploy it once; every project gets a robust SQLite DB.
 
 ```bash
-mise run recipe turso          # deploy on the cluster (auth + backup -> R2)
+mise run recipe:deploy turso          # deploy on the cluster (auth + backup -> R2)
 mise run recipe:local turso    # locally (no auth/backup, ephemeral dev)
 ```
 

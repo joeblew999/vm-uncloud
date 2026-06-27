@@ -1,6 +1,6 @@
 #!/usr/bin/env nu
 # Run a recipe LOCALLY via plain `docker compose`, using the SAME committed
-# recipes/<name>/compose.yaml as the remote `mise run recipe` path. This keeps
+# recipes/<name>/compose.yaml as the remote `mise run recipe:deploy` path. This keeps
 # local and remote DRY: ONE service definition (compose.yaml) and ONE config
 # generator (prepare.nu) drive both. The only local-specific bits live in an
 # optional sibling recipes/<name>/compose.local.yaml overlay (publish a port,
@@ -10,7 +10,7 @@
 #   mise run recipe:local rauthy --down   # down + remove volumes (reset state)
 #
 # vs the remote path:
-#   mise run recipe rauthy                # uncloud deploy onto the cluster
+#   mise run recipe:deploy rauthy                # uncloud deploy onto the cluster
 #
 # Secrets come from the recipe's prepare.nu in THROWAWAY mode (VMU_SECRET_DRY=1):
 # local data is ephemeral dev state, never your persisted cluster secrets.

@@ -1,6 +1,6 @@
 # Copy to terraform.tfvars and fill in. This file holds NON-secret config only.
 # (terraform.tfvars is gitignored.) Secrets come from fnox: HCLOUD_TOKEN and
-# CLOUDFLARE_API_TOKEN are injected from the keychain by `mise run up`.
+# CLOUDFLARE_API_TOKEN are injected from the keychain by `mise run cluster:up`.
 
 # --- Cloudflare ---
 cloudflare_zone_id = "your-zone-id-here"   # Cloudflare dashboard -> your domain -> API (right sidebar)

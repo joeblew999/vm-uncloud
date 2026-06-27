@@ -2,10 +2,10 @@
 # TCG). Copy to win-batch.tfvars and run it in its OWN context/workspace so its
 # lifecycle is independent of the live cluster:
 #
-#   mise run up   -- --context win-batch        # provision the cpx42 win node
-#   mise run recipe windows -- --context win-batch
+#   mise run cluster:up   -- --context win-batch        # provision the cpx42 win node
+#   mise run recipe:deploy windows -- --context win-batch
 #   # ...work over RDP (windows.<domain>:3389)...
-#   mise run down -- --context win-batch         # snapshot first, then destroy
+#   mise run cluster:down -- --context win-batch         # snapshot first, then destroy
 #
 # Same domain/zone/ssh as the cluster — only the node class differs.
 

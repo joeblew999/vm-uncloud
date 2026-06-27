@@ -1,7 +1,7 @@
 # rauthy recipe
 
 Rauthy (OpenID Connect IdP) as a reusable vm-uncloud recipe — the AuthN plane.
-Runs on the cluster (`mise run recipe rauthy`) or locally (`mise run
+Runs on the cluster (`mise run recipe:deploy rauthy`) or locally (`mise run
 recipe:local rauthy`, → http://localhost:8080).
 
 ## Declarative per-project bootstrap

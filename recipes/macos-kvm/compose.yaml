@@ -2,7 +2,7 @@
 # exposes /dev/kvm: Vultr Bare Metal, Hetzner Robot, any KVM host). Same dockur
 # pattern as `windows-kvm`, using dockur/macos instead.
 #
-#   mise run recipe macos-kvm -- --context mac-kvm
+#   mise run recipe:deploy macos-kvm -- --context mac-kvm
 #
 # REQUIRES /dev/kvm on the node (no TCG fallback for macOS). Provision a KVM node
 # via `win-kvm:up` (Vultr BM — it's OS-agnostic, just an uncloud machine) into a

@@ -2,7 +2,7 @@
 # metal that exposes /dev/kvm: Vultr Bare Metal, Hetzner Robot, any KVM host).
 # Native-speed Windows, unlike the TCG `windows` recipe used on Hetzner Cloud.
 #
-#   mise run recipe windows-kvm -- --context win-kvm
+#   mise run recipe:deploy windows-kvm -- --context win-kvm
 #
 # REQUIRES /dev/kvm on the node — fails on Hetzner Cloud (no nested virt; use
 # the `windows` recipe there instead). Provision a KVM node via `win-kvm:up`

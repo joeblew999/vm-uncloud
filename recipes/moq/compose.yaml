@@ -1,7 +1,7 @@
 # moq-relay — Media over QUIC relay (moq.dev). Forwards live media subscriptions
 # from publishers to subscribers over QUIC/WebTransport, caching + deduplicating.
 #
-#   mise run recipe moq            # on the cluster
+#   mise run recipe:deploy moq            # on the cluster
 #
 # ── SCAFFOLD — NOT yet deploy-verified ────────────────────────────────────────
 # This is the starting point for the moq recipe. It runs the official prebuilt

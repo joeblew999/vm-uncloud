@@ -160,8 +160,8 @@ on a node that is both a Windows node and a dev node:
 
 ```bash
 cp tofu/dev-win.tfvars.example tofu/dev-win.tfvars   # windows = true AND dev = true
-mise run dev:up:win
-mise run dev:deploy:win
+mise run dev:win:up
+mise run dev:win:deploy
 # The win:* RDP tasks resolve WIN_NODE (default win-batch-1) — point them here:
 export WIN_NODE=dev-win-1                             # or set it in mise.local.toml
 mise run win:rdp:wait && mise run win:rdp            # RDP in (user Docker / pass admin)

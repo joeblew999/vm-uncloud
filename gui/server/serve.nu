@@ -115,7 +115,7 @@ def prices-render [] {
 def ledger-render [] {
     let path = "state/log.jsonl"
     if not ($path | path exists) or ((open $path | str trim) | is-empty) {
-        return "<aside><em>no ledger yet — run mise run up / recipe</em></aside>"
+        return "<aside><em>no ledger yet — run mise run cluster:up / recipe:deploy</em></aside>"
     }
     let events = (open $path | lines | where ($it | str trim | is-not-empty) | each {|l| $l | from json } | last 30 | reverse)
     let rows = ($events | each {|e|
@@ -134,7 +134,7 @@ def ledger-render [] {
 # arbitrary task execution from the browser). Each runs fire-and-forget under
 # pitchfork so the HTTP response returns immediately and you can tail it.
 const ACTIONS = {
-  "recipe-moltis": ["recipe" "moltis"]
+  "recipe-moltis": ["recipe:deploy" "moltis"]
   "win-up":        ["win:up"]
   "win-deploy":    ["win:deploy"]
   "win-down":      ["win:down"]

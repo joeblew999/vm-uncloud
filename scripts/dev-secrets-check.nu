@@ -35,7 +35,7 @@ def main [] {
       print "      Bitwarden clients follow that for login/unlock and will FAIL."
       print "      Fix in the orangevault repo:"
       print $"        fnox set --global -p keychain ORANGEVAULT_DOMAIN    # = ($server)"
-      print "        mise run deploy"
+      print "        mise run cluster:deploy"
       $ok = false
     }
   }

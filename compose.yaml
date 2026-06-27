@@ -1,12 +1,12 @@
 # Default example: a public image on your domain. The host is NOT hardcoded —
-# ${DOMAIN} is injected by `mise run deploy` from your single source of truth
+# ${DOMAIN} is injected by `mise run cluster:deploy` from your single source of truth
 # (domain in tofu/terraform.tfvars). The wildcard *.<domain> record + cert
 # already cover any subdomain. Change "app" to whatever you like.
 #
-#   mise run deploy        # deploys this
+#   mise run cluster:deploy        # deploys this
 #
 # To ship your OWN app, give the service a `build:` section instead of `image:`
-# and `mise run deploy` builds locally + pushes only changed layers + rolls out.
+# and `mise run cluster:deploy` builds locally + pushes only changed layers + rolls out.
 services:
   whoami:
     image: traefik/whoami:latest

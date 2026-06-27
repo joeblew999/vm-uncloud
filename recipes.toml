@@ -1,5 +1,5 @@
 # Recipe sources — git repos that contain <name>/compose.yaml folders.
-# `mise run recipe <name>` clones each into .src/<name> and searches them in
+# `mise run recipe:deploy <name>` clones each into .src/<name> and searches them in
 # order, deploying the first match. Add your own repos here — that's the whole
 # "how to add more" story.
 

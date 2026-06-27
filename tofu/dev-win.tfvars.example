@@ -3,11 +3,11 @@
 # node (the dev SSH port for Remote-SSH / rsync into the guest). Copy to
 # dev-win.tfvars and run it in its own context/workspace:
 #
-#   mise run dev:up:win                      # provision the Windows dev node
-#   mise run dev:deploy:win                  # deploy the dev-windows recipe
+#   mise run dev:win:up                      # provision the Windows dev node
+#   mise run dev:win:deploy                  # deploy the dev-windows recipe
 #   mise run win:rdp:wait && mise run win:rdp # RDP in while Windows installs/provisions
 #   # ...build/test Rust on Windows; sync the repo via \\host.lan\Data or SSH...
-#   mise run dev:down:win                    # destroy when idle (snapshot first if you care)
+#   mise run dev:win:down                    # destroy when idle (snapshot first if you care)
 #
 # Windows is heavy: use a cpx42-class node (8/16). KVM=N (TCG) on Hetzner Cloud —
 # slow but cheap; for native speed use the win-kvm bare-metal path instead.

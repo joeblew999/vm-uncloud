@@ -2,7 +2,7 @@
 # global `caddy` service. Replaces the default Caddy so it can do DNS-01 wildcard
 # certs. Follows uncloud's documented managing-caddy pattern.
 #
-# DOMAIN and CLOUDFLARE_API_TOKEN are injected at deploy time by `mise run up`
+# DOMAIN and CLOUDFLARE_API_TOKEN are injected at deploy time by `mise run cluster:up`
 # (from fnox/keychain). The token is needed ON the box for the DNS-01 challenge —
 # scope it to Zone:DNS:Edit for just your zone.
 services:

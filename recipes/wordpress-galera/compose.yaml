@@ -10,7 +10,7 @@
 # DNS (gcomm://mariadb-bootstrap,mariadb). WordPress runs replicated against the
 # `mariadb` joiners.
 #
-#   mise run recipe wordpress-galera
+#   mise run recipe:deploy wordpress-galera
 services:
   # Bootstraps the cluster. Keep exactly one; do not scale.
   mariadb-bootstrap:

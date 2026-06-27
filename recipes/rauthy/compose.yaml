@@ -3,7 +3,7 @@
 # is the AuthN plane: it issues JWTs that edge Workers (cf-connectrpc-middleware
 # / connectrpc-oidc) validate against the JWKS endpoint. Cedar (AuthZ) is not here.
 #
-#   mise run recipe rauthy
+#   mise run recipe:deploy rauthy
 #
 # Config VERIFIED 2026-06-12 by booting ghcr.io/sebadob/rauthy:0.35.2 locally
 # (orbstack) with this exact env: it bootstraps the admin and serves OIDC

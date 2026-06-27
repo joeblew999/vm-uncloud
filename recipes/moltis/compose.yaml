@@ -3,7 +3,7 @@
 # MOLTIS_TOKEN (persisted) bootstraps auth. Configure an LLM provider on first boot
 # using the setup code from `uc logs moltis`.
 #
-#   mise run recipe moltis
+#   mise run recipe:deploy moltis
 #
 # SECURITY: Moltis isolates the agent's shell commands in Docker, so it mounts
 # /var/run/docker.sock — that grants this container full Docker access on its

@@ -8,7 +8,7 @@
 def main [] {
   let dom = ($env.DOMAIN? | default "")
   if ($dom | is-empty) {
-    print -e "no domain — run 'mise run dev:up:win' first"
+    print -e "no domain — run 'mise run dev:win:up' first"
     exit 1
   }
 

@@ -27,7 +27,7 @@ def with-pty [cmd: list<string>] {
 # --context selects a node class with ISOLATED state: a tofu workspace named
 # <context> + tofu/<context>.tfvars + an uncloud context of the same name. Omit
 # it for the default cluster (workspace "default", terraform.tfvars, context
-# from $UNCLOUD_CONTEXT). e.g. `mise run up -- --context win-batch`.
+# from $UNCLOUD_CONTEXT). e.g. `mise run cluster:up -- --context win-batch`.
 def main [--context: string = ""] {
   # If remote (R2) state is active, derive its S3 creds from the CF token so
   # every tofu command below can read/write state. No-op for local state.
@@ -128,6 +128,6 @@ def main [--context: string = ""] {
     print $"  publish any subdomain — it resolves \(($wildcard)\) and gets the wildcard cert instantly:"
     print $"  uncloud run -p app.($domain):8000/https traefik/whoami"
   }
-  print "  mise run deploy    # apply compose.yaml"
-  print "  mise run status"
+  print "  mise run cluster:deploy    # apply compose.yaml"
+  print "  mise run cluster:status"
 }

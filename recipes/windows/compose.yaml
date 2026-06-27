@@ -1,9 +1,9 @@
 # Windows desktop — dockur/windows run as an uncloud service. This is the
 # uncloud-native way to do desktop virt: dockur/windows is just a container,
 # so it deploys like any other recipe. Same as the bespoke vm-servers lifecycle
-# used to do, but through `mise run recipe windows` + the uncloud up/down flow.
+# used to do, but through `mise run recipe:deploy windows` + the uncloud up/down flow.
 #
-#   mise run recipe windows
+#   mise run recipe:deploy windows
 #
 # ── SIZING / PLACEMENT ──────────────────────────────────────────────────────
 # Windows is heavy: the RAM_SIZE/CPU_CORES below assume a cpx42-class node

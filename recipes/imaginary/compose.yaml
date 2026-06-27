@@ -4,7 +4,7 @@
 # Cloudflare R2) or a multipart upload; auth via the `API-Key` header.
 # Published at https://img.<your-domain>.
 #
-#   mise run recipe imaginary
+#   mise run recipe:deploy imaginary
 #
 # Example (R2 source -> 300px webp):
 #   curl -H "API-Key: <key>" \

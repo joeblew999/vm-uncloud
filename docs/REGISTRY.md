@@ -60,7 +60,7 @@ mise run registry:remove  -- --context hetzner --service moltis
 
 # auto — every recipe deploy publishes its URL
 #   mise.local.toml:  [env]\n  VMU_REGISTRY = "1"
-mise run recipe moltis        # now also registers vmu/hetzner/moltis -> https://moltis.<domain>
+mise run recipe:deploy moltis        # now also registers vmu/hetzner/moltis -> https://moltis.<domain>
 ```
 
 It is **best-effort and self-guarding**: with no `bw` / no creds, or `VMU_REGISTRY`

@@ -14,7 +14,7 @@ def main [] {
     print $"  Nodes:    ($o.node_ipv4.value | str join ', ')"
     print $"  Wildcard: ($o.wildcard.value)"
   } else {
-    print "  (no state — run 'mise run up' first)"
+    print "  (no state — run 'mise run cluster:up' first)"
   }
 
   print ""

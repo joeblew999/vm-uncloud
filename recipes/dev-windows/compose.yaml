@@ -5,8 +5,8 @@
 # windows node and a dev node (tofu: windows = true, dev = true — see
 # tofu/dev-win.tfvars.example), so RDP :3389 and the dev SSH port are both open.
 #
-#   mise run dev:up:win                  # provision the Windows dev node
-#   mise run dev:deploy:win              # deploy this recipe onto it
+#   mise run dev:win:up                  # provision the Windows dev node
+#   mise run dev:win:deploy              # deploy this recipe onto it
 #   mise run win:rdp:wait && mise run win:rdp   # RDP in (user Docker / pass admin)
 #
 # ── HOW YOUR REPO GETS IN (primary, verified path) ──────────────────────────

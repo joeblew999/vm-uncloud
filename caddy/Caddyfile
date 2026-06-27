@@ -6,7 +6,7 @@
 # (app.<domain>, api.<domain>, ...) is served with this wildcard cert.
 #
 # {$DOMAIN} is substituted at load time from the container env; the Cloudflare
-# token is read at runtime. Both are injected by `mise run up` from fnox.
+# token is read at runtime. Both are injected by `mise run cluster:up` from fnox.
 
 {
 	# email {$ACME_EMAIL}   # uncomment to set an ACME contact

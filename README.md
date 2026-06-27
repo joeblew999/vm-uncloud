@@ -12,12 +12,12 @@ Need: a Cloudflare zone + token (`Zone:DNS:Edit`), a Hetzner project + SSH key.
 mise install                                             # all tools, incl. the uncloud CLI
 cp tofu/terraform.tfvars.example tofu/terraform.tfvars   # domain, cloudflare_zone_id, ssh_key_name
 mise run secrets:set                                     # tokens -> keychain
-mise run up                                              # server + wildcard DNS + cluster
-mise run deploy                                          # deploy compose.yaml
-mise run down                                            # destroy everything
+mise run cluster:up                                              # server + wildcard DNS + cluster
+mise run cluster:deploy                                          # deploy compose.yaml
+mise run cluster:down                                            # destroy everything
 ```
 
-Secrets stay in the keychain via `fnox`, never on disk. TLS is one `*.<domain>` wildcard cert via Cloudflare DNS-01 — any subdomain just works. (`scripts/up.nu` gives `uncloud machine init` a PTY so it runs headless — CI/agents too.)
+Secrets stay in the keychain via `fnox`, never on disk. TLS is one `*.<domain>` wildcard cert via Cloudflare DNS-01 — any subdomain just works. (`scripts/cluster-up.nu` gives `uncloud machine init` a PTY so it runs headless — CI/agents too.)
 
 ## Config — `tofu/terraform.tfvars`
 
@@ -33,7 +33,7 @@ Secrets stay in the keychain via `fnox`, never on disk. TLS is one `*.<domain>` 
 
 ## Deploy
 
-Use `${DOMAIN}` in compose — never hardcode the host; `mise run deploy` injects it.
+Use `${DOMAIN}` in compose — never hardcode the host; `mise run cluster:deploy` injects it.
 
 ```yaml
 services:
@@ -43,9 +43,9 @@ services:
 ```
 
 ```bash
-mise run deploy        # build + push changed layers + roll out
-mise watch deploy      # re-deploy on save
-mise run push [image]  # push only — built-in registry, no docker pull
+mise run cluster:deploy        # build + push changed layers + roll out
+mise watch cluster:deploy      # re-deploy on save
+mise run cluster:push [image]  # push only — built-in registry, no docker pull
 ```
 
 Building needs local Docker (e.g. OrbStack on a Mac); the push is `uncloud`'s own. Build arch must match the server: `cpx22` is x86, so build `linux/amd64` (set `platform: linux/amd64` on the service) — or use `cax11` ARM nodes to match an Apple-silicon Mac.
@@ -55,12 +55,12 @@ Building needs local Docker (e.g. OrbStack on a Mac); the push is `uncloud`'s ow
 Ready-to-run services in [`recipes/`](recipes/) (local first, then [`recipes.toml`](recipes.toml) upstream):
 
 ```bash
-mise run recipe                  # list
-mise run recipe wordpress        # WordPress + MariaDB
-mise run recipe imaginary        # libvips image API (h2non/imaginary)
-mise run recipe moltis           # self-hosted AI agent server
-mise run recipe windows          # Windows desktop (dockur/windows) — see Virtual desktops
-mise run recipe wordpress-galera # EXPERIMENTAL — multi-master (needs node_count >= 3)
+mise run recipe:deploy                  # list
+mise run recipe:deploy wordpress        # WordPress + MariaDB
+mise run recipe:deploy imaginary        # libvips image API (h2non/imaginary)
+mise run recipe:deploy moltis           # self-hosted AI agent server
+mise run recipe:deploy windows          # Windows desktop (dockur/windows) — see Virtual desktops
+mise run recipe:deploy wordpress-galera # EXPERIMENTAL — multi-master (needs node_count >= 3)
 ```
 
 A recipe is a folder: `compose.yaml` + optional `prepare.nu` (generates and persists its own secrets). Adding one touches no shared code.
@@ -106,13 +106,13 @@ name — see [`docs/DEVCONTAINERS.md`](docs/DEVCONTAINERS.md) (Secrets) and
 ## State
 
 ```bash
-mise run status        # machines, services, history
+mise run cluster:status        # machines, services, history
 mise run state:remote  # move tofu state to Cloudflare R2 (durable, lockable)
 ```
 
 `state/log.jsonl` is the up/deploy/down ledger (in git). `tofu` uses `HCLOUD_TOKEN` — verify infra with `fnox exec -- hcloud server list`, not bare `hcloud`.
 
-> **Teardown granularity:** `mise run down` is whole-node (tofu destroy) — right
+> **Teardown granularity:** `mise run cluster:down` is whole-node (tofu destroy) — right
 > for the ephemeral win nodes, but there's no clean "remove just one recipe, keep
 > the node + its other services" yet. Tracked upstream: uncloud
 > [#369](https://github.com/psviderski/uncloud/issues/369) (`uncloud undeploy` / an
@@ -171,7 +171,7 @@ mise run caddy:external
 ## Troubleshooting
 
 - **No cert** — `docker logs $(docker ps -qf name=caddy) | grep -i acme`. Caddy must be `caddybuilds/caddy-cloudflare` with `CLOUDFLARE_API_TOKEN` set.
-- **`context not found`** — must match `$UNCLOUD_CONTEXT` (`hetzner`); `mise run up` sets it.
+- **`context not found`** — must match `$UNCLOUD_CONTEXT` (`hetzner`); `mise run cluster:up` sets it.
 
 ## Virtual desktops (Windows)
 

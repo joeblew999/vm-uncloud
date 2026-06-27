@@ -7,7 +7,7 @@ def main [] {
   let dom = ($env.DOMAIN? | default "")
   let host = ($env.WP_DOMAIN? | default (if ($dom | is-empty) { "" } else { $"wordpress.($dom)" }))
   if ($host | is-empty) {
-    print -e "no domain — run 'mise run up' first, or set WP_DOMAIN=host.example.com"
+    print -e "no domain — run 'mise run cluster:up' first, or set WP_DOMAIN=host.example.com"
     exit 1
   }
   print -e "EXPERIMENTAL: Galera needs a multi-node cluster (node_count >= 3) — see issue #2"

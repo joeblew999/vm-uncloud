@@ -1,10 +1,10 @@
 #:schema https://mise.jdx.dev/schema/mise.json
 # vm-uncloud — one-command Uncloud cluster on Hetzner with your own Cloudflare domain.
 #
-# Flow:  mise run setup   (once)  -> install the uncloud CLI locally
-#        mise run up               -> tofu apply (Hetzner box + Cloudflare DNS) + uncloud machine init
-#        mise run deploy           -> uncloud deploy compose.yaml
-#        mise run down             -> tofu destroy (server + DNS records, clean)
+# Flow:  mise run cluster:setup   (once)  -> install the uncloud CLI locally
+#        mise run cluster:up               -> tofu apply (Hetzner box + Cloudflare DNS) + uncloud machine init
+#        mise run cluster:deploy           -> uncloud deploy compose.yaml
+#        mise run cluster:down             -> tofu destroy (server + DNS records, clean)
 #
 # Secrets come from fnox (keychain) -> mise tasks. Never hand-edit a .env / .tfvars file.
 
@@ -83,34 +83,34 @@ ORANGEVAULT_DEV_DOMAIN = "https://orangevault.gedw99.workers.dev"
 # Setup — install the two LOCAL binaries Uncloud needs. Everything server-side
 # is pushed over SSH by `uncloud machine init`, so this is all that runs on your box.
 # ---------------------------------------------------------------------------
-[tasks.setup]
+[tasks."cluster:setup"]
 description = "Ensure tools are installed (mise) + print next steps"
-run = "nu scripts/setup.nu"
+run = "nu scripts/cluster-setup.nu"
 
 # ---------------------------------------------------------------------------
 # Lifecycle — every task is wrapped in `fnox exec` so HCLOUD_TOKEN and
 # CLOUDFLARE_API_TOKEN are injected from the keychain (never disk); the tofu
 # providers and `hcloud` read them straight from the environment.
 # ---------------------------------------------------------------------------
-[tasks.up]
+[tasks."cluster:up"]
 description = "Provision Hetzner VPS + Cloudflare DNS, then init the Uncloud cluster"
-run = "fnox exec --if-missing ignore -- nu scripts/up.nu"
+run = "fnox exec --if-missing ignore -- nu scripts/cluster-up.nu"
 
-[tasks.deploy]
+[tasks."cluster:deploy"]
 description = "Deploy services from compose.yaml to the cluster"
-run = "fnox exec --if-missing ignore -- nu scripts/deploy.nu"
+run = "fnox exec --if-missing ignore -- nu scripts/cluster-deploy.nu"
 
-[tasks.push]
-description = "Ship local Docker images to the cluster (uncloud build --push, or: mise run push <image>)"
-run = "nu scripts/push.nu"
+[tasks."cluster:push"]
+description = "Ship local Docker images to the cluster (uncloud build --push, or: mise run cluster:push <image>)"
+run = "nu scripts/cluster-push.nu"
 
-[tasks.down]
+[tasks."cluster:down"]
 description = "Destroy the server and remove its Cloudflare DNS records"
-run = "fnox exec --if-missing ignore -- nu scripts/down.nu"
+run = "fnox exec --if-missing ignore -- nu scripts/cluster-down.nu"
 
-[tasks.status]
+[tasks."cluster:status"]
 description = "Show machines, services, and the resolved cluster domain"
-run = "fnox exec --if-missing ignore -- nu scripts/status.nu"
+run = "fnox exec --if-missing ignore -- nu scripts/cluster-status.nu"
 
 [tasks.ci]
 description = "Repo checks: tofu fmt + validate + nushell parse (also run by CI)"
@@ -121,11 +121,11 @@ description = "Front non-container services (bare metal/BMC/home hub) via manage
 run = "fnox exec --if-missing ignore -- nu scripts/caddy-external.nu"
 
 # Deploy a ready-made recipe from psviderski/uncloud-recipes, e.g.
-#   mise run recipe wordpress-mariadb
+#   mise run recipe:deploy wordpress-mariadb
 # Clones the recipes into .src/ (gitignored) on first use. See examples/.
-[tasks.recipe]
+[tasks."recipe:deploy"]
 description = "Deploy a named recipe from uncloud-recipes (e.g. wordpress-mariadb)"
-run = "fnox exec --if-missing ignore -- nu scripts/recipe.nu"
+run = "fnox exec --if-missing ignore -- nu scripts/recipe-deploy.nu"
 
 # Run the SAME recipe locally via plain docker compose (DRY with `recipe` above —
 # shared compose.yaml + prepare.nu; local deltas in an optional compose.local.yaml).
@@ -145,10 +145,10 @@ description = "Preview infrastructure changes without applying"
 hide = true
 run = "fnox exec --if-missing ignore -- tofu -chdir=tofu plan"
 
-[tasks."recipes:sync"]
+[tasks."recipe:sync"]
 description = "Shallow-clone/update uncloud-recipes into .src/"
 hide = true
-run = "nu scripts/recipes-sync.nu"
+run = "nu scripts/recipe-sync.nu"
 
 # ---------------------------------------------------------------------------
 # Turso / libSQL — self-hosted SQLite (D1 replacement) with R2-backed DR.
@@ -157,7 +157,7 @@ run = "nu scripts/recipes-sync.nu"
 # ---------------------------------------------------------------------------
 [tasks."turso:deploy"]
 description = "Deploy the turso/libSQL recipe onto the cluster (bottomless backup -> R2)"
-run = "mise run recipe turso"
+run = "mise run recipe:deploy turso"
 
 [tasks."turso:token"]
 description = "Print the libSQL client auth token (generates+persists the JWT keypair on first run). Give this to a consuming project."
@@ -191,10 +191,10 @@ run = "fnox exec -- nu recipes/turso/dr.nu restore"
 description = "Move tofu state into Cloudflare R2 (durable + lockable; one-time)"
 run = "fnox exec --if-missing ignore -- nu scripts/state-remote.nu"
 
-[tasks.smoke]
+[tasks."cluster:smoke"]
 description = "CI check: tofu apply+destroy a throwaway box (infra only, no DNS, no uncloud)"
 hide = true
-run = "fnox exec --if-missing ignore -- nu scripts/smoke.nu"
+run = "fnox exec --if-missing ignore -- nu scripts/cluster-smoke.nu"
 
 # ---------------------------------------------------------------------------
 # Prices — queryable price model (rate cards), split by class into three files:
@@ -242,11 +242,11 @@ for s in ["prices-refresh-hetzner-dedicated.nu" "prices-refresh-hetzner-auction.
 # ---------------------------------------------------------------------------
 [tasks."win:up"]
 description = "Provision the dedicated cpx42 Windows node (win-batch context)."
-run = "fnox exec --if-missing ignore -- nu scripts/up.nu --context win-batch"
+run = "fnox exec --if-missing ignore -- nu scripts/cluster-up.nu --context win-batch"
 
 [tasks."win:deploy"]
 description = "Deploy the windows recipe (dockur/windows) onto the win-batch node."
-run = "fnox exec --if-missing ignore -- nu scripts/recipe.nu windows --context win-batch"
+run = "fnox exec --if-missing ignore -- nu scripts/recipe-deploy.nu windows --context win-batch"
 
 [tasks."win:ip"]
 description = "Public IPv4 of the Windows node."
@@ -264,7 +264,7 @@ run = "fnox exec --if-missing ignore -- hcloud server create-image --type snapsh
 [tasks."win:down"]
 description = "Snapshot THEN destroy the Windows node (stops billing; restore with win:up)."
 depends = ["win:snapshot"]
-run = "fnox exec --if-missing ignore -- nu scripts/down.nu --context win-batch"
+run = "fnox exec --if-missing ignore -- nu scripts/cluster-down.nu --context win-batch"
 
 [tasks."win:rdp:install"]
 description = "Install/verify an RDP client for this OS (idempotent)."
@@ -309,7 +309,7 @@ run = "fnox exec --if-missing ignore -- nu scripts/vultr-init.nu"
 
 [tasks."win-kvm:deploy"]
 description = "Deploy the KVM windows recipe (dockur + /dev/kvm) onto the win-kvm node."
-run = "fnox exec --if-missing ignore -- nu scripts/recipe.nu windows-kvm --context win-kvm"
+run = "fnox exec --if-missing ignore -- nu scripts/recipe-deploy.nu windows-kvm --context win-kvm"
 
 [tasks."win-kvm:rdp"]
 description = "RDP into the win-kvm Vultr node (Docker/admin)."
@@ -341,11 +341,11 @@ run = "fnox exec --if-missing ignore -- nu scripts/vultr-down.nu"
 # ---------------------------------------------------------------------------
 [tasks."dev:up"]
 description = "Provision the dedicated Linux dev node (dev context)."
-run = "fnox exec --if-missing ignore -- nu scripts/up.nu --context dev"
+run = "fnox exec --if-missing ignore -- nu scripts/cluster-up.nu --context dev"
 
 [tasks."dev:deploy"]
 description = "Build + deploy the dev-linux recipe (mise + sshd) onto the dev node."
-run = "fnox exec --if-missing ignore -- nu scripts/recipe.nu dev-linux --context dev"
+run = "fnox exec --if-missing ignore -- nu scripts/recipe-deploy.nu dev-linux --context dev"
 
 [tasks."dev:ip"]
 description = "Public IPv4 of the Linux dev node."
@@ -373,25 +373,25 @@ run = "fnox exec --if-missing ignore -- hcloud server describe dev-1"
 # operations / CI / Claude Code can tear it down non-interactively. Re-create
 # with dev:up + dev:deploy.
 description = "Destroy the Linux dev node (auto-confirmed; reproducible — re-sync after dev:up)."
-run = "fnox exec --if-missing ignore -- nu scripts/down.nu --context dev --yes"
+run = "fnox exec --if-missing ignore -- nu scripts/cluster-down.nu --context dev --yes"
 
 # dev-windows — a Windows dev desktop node (windows=true AND dev=true). RDP is
 # the primary entry; SSH/Remote-SSH into the guest is EXPERIMENTAL. Override
 # DEV_NODE=dev-win-1 / DEV_USER=Docker for the connect helpers against it.
-[tasks."dev:up:win"]
+[tasks."dev:win:up"]
 description = "Provision the Windows dev node (dev-win context)."
-run = "fnox exec --if-missing ignore -- nu scripts/up.nu --context dev-win"
+run = "fnox exec --if-missing ignore -- nu scripts/cluster-up.nu --context dev-win"
 
-[tasks."dev:deploy:win"]
+[tasks."dev:win:deploy"]
 description = "Deploy the dev-windows recipe (dockur + oem provisioning) onto the dev-win node."
-run = "fnox exec --if-missing ignore -- nu scripts/recipe.nu dev-windows --context dev-win"
+run = "fnox exec --if-missing ignore -- nu scripts/recipe-deploy.nu dev-windows --context dev-win"
 
-[tasks."dev:down:win"]
+[tasks."dev:win:down"]
 # Headless --yes too. NOTE: this destroys the Windows guest disk (no snapshot —
 # unlike win:down). If you need to preserve guest state, use the win:* flow
 # (win:snapshot/win:down) on a win-batch node instead of a dev-win node.
 description = "Destroy the Windows dev node (auto-confirmed; guest state is NOT snapshotted)."
-run = "fnox exec --if-missing ignore -- nu scripts/down.nu --context dev-win --yes"
+run = "fnox exec --if-missing ignore -- nu scripts/cluster-down.nu --context dev-win --yes"
 
 # dev:secrets — wire the dev containers to OrangeVault (the running Bitwarden-compat
 # vault). The vault URL defaults from $ORANGEVAULT_DEV_DOMAIN; only the dedicated
@@ -506,7 +506,7 @@ dir = "{{config_root}}"
 description = "Tail the GUI daemon log (--follow)."
 run = "pitchfork logs gui --follow"
 
-[tasks."jobs"]
+[tasks."gui:jobs"]
 description = "Show what pitchfork is supervising (gui, xs)."
 run = "pitchfork list"
 

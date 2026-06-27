@@ -19,7 +19,7 @@ tofu/override.tf.json
 # Live Caddy snippet (may contain internal IPs) — keep only the .example template.
 caddy/external.caddyfile
 
-# Upstream recipes are referenced, not vendored — cloned on demand by `mise run recipe`.
+# Upstream recipes are referenced, not vendored — cloned on demand by `mise run recipe:deploy`.
 .src/
 
 # Local scratch.

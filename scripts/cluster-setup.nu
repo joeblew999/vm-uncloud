@@ -18,5 +18,5 @@ def main [] {
   print "Done. Next:"
   print "  1. cp tofu/terraform.tfvars.example tofu/terraform.tfvars   # set domain, zone, ssh key"
   print "  2. mise run secrets:set                                     # store API tokens in keychain"
-  print "  3. mise run up                                              # build the cluster"
+  print "  3. mise run cluster:up                                              # build the cluster"
 }

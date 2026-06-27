@@ -5,7 +5,7 @@ publishers to subscribers over **QUIC / WebTransport**, caching and
 deduplicating along the way. Real-time latency at scale.
 
 ```bash
-mise run recipe moq
+mise run recipe:deploy moq
 ```
 
 Runs the **official prebuilt image** `moqdev/moq-relay` (multi-arch amd64 +

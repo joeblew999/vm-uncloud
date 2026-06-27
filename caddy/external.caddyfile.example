@@ -6,7 +6,7 @@
 # (runs `uc caddy deploy --caddyfile caddy/external.caddyfile`)
 #
 # Each hostname must have a DNS A record pointing at the ingress node — add it to
-# app_hostnames in tofu/terraform.tfvars and `mise run up`, or create it manually.
+# app_hostnames in tofu/terraform.tfvars and `mise run cluster:up`, or create it manually.
 # The cluster nodes must be able to reach the target IP (same LAN, VPN, etc.).
 
 # Plain HTTP upstream (e.g. HomeAssistant on a dedicated host):

@@ -9,7 +9,7 @@
 def main [] {
   let dom = ($env.DOMAIN? | default "")
   if ($dom | is-empty) {
-    print -e "no domain — run 'mise run up' first"
+    print -e "no domain — run 'mise run cluster:up' first"
     exit 1
   }
   print -e "windows: heavy workload — deploy onto a cpx42-class node, NOT the cpx22 cluster node."

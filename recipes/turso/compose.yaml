@@ -1,7 +1,7 @@
 # Turso / libSQL (sqld) — self-hosted SQLite-as-a-server, a durable, authenticated
 # drop-in for Cloudflare D1 that ANY of our projects can consume.
 #
-#   mise run recipe turso          # on the cluster (auth + backup -> R2)
+#   mise run recipe:deploy turso          # on the cluster (auth + backup -> R2)
 #   mise run recipe:local turso    # locally (no auth, no backup, ephemeral dev)
 #
 # What a consuming project gets (see README "Consume from another project"):

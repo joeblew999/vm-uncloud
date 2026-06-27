@@ -2,10 +2,10 @@
 # Deploy a recipe by name. Resolves the repo's committed recipes/ first, then
 # the upstream catalog in recipes.toml (cloned into .src/).
 #
-#   mise run recipe wordpress     # local example
-#   mise run recipe imaginary     # local example
-#   mise run recipe nats          # upstream catalog
-#   mise run recipe               # list everything
+#   mise run recipe:deploy wordpress     # local example
+#   mise run recipe:deploy imaginary     # local example
+#   mise run recipe:deploy nats          # upstream catalog
+#   mise run recipe:deploy               # list everything
 #
 # This script is GENERIC — it has no per-recipe knowledge. A recipe that needs
 # config (generated secrets, a derived hostname) ships a `prepare.nu` next to its
@@ -49,15 +49,15 @@ def list_recipes [] {
 }
 
 # --context deploys onto a non-default uncloud cluster (e.g. the win-batch node):
-#   mise run recipe windows -- --context win-batch
+#   mise run recipe:deploy windows -- --context win-batch
 def main [recipe?: string, --context: string = ""] {
   load-env (r2-creds)   # so `tofu output` can read remote state
   if ($recipe | is-not-empty) and not ($"recipes/($recipe)/compose.yaml" | path exists) {
-    nu scripts/recipes-sync.nu
+    nu scripts/recipe-sync.nu
   }
   if ($recipe | is-empty) {
-    nu scripts/recipes-sync.nu
-    print "Usage: mise run recipe <name>. Available:"
+    nu scripts/recipe-sync.nu
+    print "Usage: mise run recipe:deploy <name>. Available:"
     list_recipes
     exit 1
   }
@@ -106,5 +106,5 @@ def main [recipe?: string, --context: string = ""] {
   }
 
   print ""
-  print "Deployed. Check: mise run status"
+  print "Deployed. Check: mise run cluster:status"
 }

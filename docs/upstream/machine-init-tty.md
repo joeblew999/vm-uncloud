@@ -7,7 +7,7 @@ rather than duplicate. `uc` 0.19.0.
 
 ## What we saw
 
-`mise run up` (which ends with `uc machine init root@<ip> … -y`) fails in a
+`mise run cluster:up` (which ends with `uc machine init root@<ip> … -y`) fails in a
 non-interactive shell at the post-init readiness step:
 
 ```
@@ -47,8 +47,8 @@ Tested on a throwaway node (uc 0.19.0, non-interactive shell, no controlling TTY
 
 ## Fix in this repo (auto)
 
-`scripts/up.nu` now wraps `uc machine init`/`add` in a PTY (`with-pty` →
+`scripts/cluster-up.nu` now wraps `uc machine init`/`add` in a PTY (`with-pty` →
 `script -q /dev/null …` on macOS/BSD, `script -qec "…" /dev/null` on Linux), and
-`scripts/vultr-init.nu` does the same for win-kvm. So `mise run up` completes
+`scripts/vultr-init.nu` does the same for win-kvm. So `mise run cluster:up` completes
 headlessly — no manual finish needed. Drop the wrapper if/when uncloud ships a
 `--plain`/`--no-tui` path (#386).
