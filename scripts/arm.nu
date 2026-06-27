@@ -1,8 +1,13 @@
 #!/usr/bin/env nu
 # Hetzner ARM (cax) capacity tools. Run via mise (`arm:*`) which wraps these in
-# `fnox exec` so HCLOUD_TOKEN is injected. ARM is frequently sold out in the EU
-# locations, so check ALL datacenters (US + Singapore often have stock) and grab
-# capacity the moment it appears.
+# `fnox exec` so HCLOUD_TOKEN is injected.
+#
+# cax (ARM) is offered ONLY in the 3 EU locations — nbg1 / hel1 / fsn1. The US
+# (ash, hil) and Singapore (sin) datacenters do NOT offer ARM at all (cax isn't
+# even in their `supported` set), so don't expect stock there. ARM is frequently
+# 100% sold out across all 3 EU sites for long stretches — a `check` showing
+# "sold out" everywhere is the normal, correct state, not a bug. The watch polls
+# every datacenter and grabs the instant any EU site restocks.
 #
 #   mise run arm:check                 # availability matrix, all locations
 #   mise run arm:grab -- <loc> [size]  # secure ONE box in a location (costs money)
@@ -12,24 +17,32 @@
 
 const SSH_KEY = "gedw99_hetzner"   # matches tofu var ssh_key_name
 
-# Which cax sizes are available where (by location).
+# Which cax sizes are available where (by location). `cax` = orderable right now;
+# `supported` = offered at that site at all (empty ⇒ no ARM there, e.g. US/SIN).
 def cax-availability [] {
   let cax = (^hcloud server-type list -o json | from json | where name =~ '^cax' | select id name)
   ^hcloud datacenter list -o json | from json | each {|dc|
-    let avail = $dc.server_types.available
     {
       location: $dc.location.name
       city: $dc.location.city
-      cax: ($cax | where {|t| $t.id in $avail } | get name | sort)
+      cax: ($cax | where {|t| $t.id in $dc.server_types.available } | get name | sort)
+      supported: ($cax | where {|t| $t.id in $dc.server_types.supported } | get name | sort)
     }
   } | sort-by location
 }
 
-# main check — availability matrix.
+# main check — availability matrix. Distinguishes "sold out" (offered here but no
+# stock) from "no ARM" (cax not offered at this site at all).
 def "main check" [] {
   print "Hetzner ARM (cax) availability:"
   for r in (cax-availability) {
-    let mark = (if ($r.cax | is-empty) { "✗ none" } else { $"✓ ($r.cax | str join ', ')" })
+    let mark = (if ($r.supported | is-empty) {
+      "— no ARM at this site"
+    } else if ($r.cax | is-empty) {
+      "✗ sold out"
+    } else {
+      $"✓ ($r.cax | str join ', ')"
+    })
     print $"  ($r.location | fill -a left -w 8) ($r.city | fill -a left -w 16) ($mark)"
   }
 }
