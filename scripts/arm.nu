@@ -52,20 +52,18 @@ def grab-one [location: string, size: string] {
   let name = $"arm-reserve-($location)"
   print $"==> securing ($size) in ($location) as ($name) ..."
   ^hcloud server create --name $name --type $size --image ubuntu-24.04 --location $location --ssh-key $SSH_KEY
-  # Record the grab in the durable ledger (state/log.jsonl) — survives teardown,
-  # shows in `cluster:status` + the GUI. Best-effort; never let it block the grab.
-  let ip = (try { ^hcloud server ip $name | str trim } catch { "" })
-  try { ^nu state/log.nu up --cluster arm --server-type $size --location $location --ips $ip }
-  print $"✓ ($name) secured at ($ip). Stop billing: mise run arm:release -- ($location)"
+  # No local record kept — Hetzner is the single source of truth. The box itself
+  # (name, type, DC, IP, status, created-at) IS the record; see `mise run arm:list`.
+  print $"✓ ($name) secured. See it: mise run arm:list. Stop billing: mise run arm:release -- ($location)"
 }
 
-# main list — show the cax boxes we currently hold (live from Hetzner). The
-# durable history is the ledger (state/log.jsonl); this is the live truth.
+# main list — the cax boxes we hold, straight from Hetzner (the SSOT). No local
+# state: `created` is when it was grabbed; everything here is live.
 def "main list" [] {
   let boxes = (^hcloud server list -o json | from json | where name =~ '^arm-reserve-')
   if ($boxes | is-empty) { print "No ARM boxes held (arm-reserve-*). The watcher grabs one per EU site when stock appears."; return }
   $boxes | each {|s|
-    { name: $s.name, type: $s.server_type.name, dc: $s.datacenter.name, ip: $s.public_net.ipv4.ip, status: $s.status }
+    { name: $s.name, type: $s.server_type.name, dc: $s.datacenter.name, ip: $s.public_net.ipv4.ip, status: $s.status, created: $s.created }
   } | sort-by dc | table
 }
 
@@ -116,7 +114,6 @@ def "main watch" [size: string = "cax11", --interval: int = 5, --max: int = 1] {
 # main release — delete a secured box.
 def "main release" [location: string] {
   ^hcloud server delete $"arm-reserve-($location)"
-  try { ^nu state/log.nu down --cluster arm --location $location }
   print $"✓ released arm-reserve-($location)"
 }
 
@@ -124,12 +121,7 @@ def "main release" [location: string] {
 def "main release-all" [] {
   let boxes = (^hcloud server list -o json | from json | where name =~ '^arm-reserve-' | get name)
   if ($boxes | is-empty) { print "no secured arm boxes."; return }
-  for b in $boxes {
-    ^hcloud server delete $b
-    let loc = ($b | str replace 'arm-reserve-' '')
-    try { ^nu state/log.nu down --cluster arm --location $loc }
-    print $"✓ released ($b)"
-  }
+  for b in $boxes { ^hcloud server delete $b; print $"✓ released ($b)" }
 }
 
 def main [] { main check }
