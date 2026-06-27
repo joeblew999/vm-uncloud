@@ -40,3 +40,16 @@ plain HTTP service, so three things must be sorted on the first real deploy:
 2. Swap the self-signed cert for a real `moq.<domain>` cert.
 3. Stand up token auth (`moqdev/moq-token-cli`) and set `[auth]` in `prepare.nu`.
 4. Pin/bump the image tag (`0.12.13` today; `latest` is multi-arch).
+
+## Clients
+
+This recipe is the **relay** (server). For mobile clients, **Software Mansion's
+[moq-kit](https://github.com/software-mansion-labs/moq-kit)** gives native
+**Swift (iOS 16+) and Kotlin (Android API 29+)** SDKs to connect to a relay,
+discover broadcasts, publish camera/mic/screen tracks, and play streams. It's
+built on `moq-ffi` (UniFFI bindings) from the same `moq-dev/moq` core, so it
+speaks the same protocol — point its endpoint at `moq.<domain>:4443`. Distributed
+via Swift Package Manager + Maven Central (Apache-2.0).
+
+Web/CLI clients come from `moq-dev/moq` itself (`moqdev/moq-cli`, the JS
+WebTransport client).
