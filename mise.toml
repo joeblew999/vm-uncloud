@@ -566,7 +566,7 @@ description = "Secure one cax box in EVERY location that has stock right now (bi
 run = "fnox exec --if-missing ignore -- nu scripts/arm.nu secure"
 
 [tasks."arm:watch"]
-description = "Watch + auto-grab cax in any location the moment it has stock (leave running). Usage: mise run arm:watch -- [size]"
+description = "Watch + auto-grab cax up to --max boxes (default 1), then idle. Usage: mise run arm:watch -- [size] [--max N] [--interval S]"
 run = "fnox exec --if-missing ignore -- nu scripts/arm.nu watch"
 
 # Supervised (pitchfork) variants so the watch survives sessions/crashes — same

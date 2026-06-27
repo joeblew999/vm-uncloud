@@ -66,21 +66,30 @@ def "main secure" [size: string = "cax11"] {
   for r in $here { grab-one $r.location $size }
 }
 
-# main watch — poll until cax appears in a location, then grab it (and keep
-# grabbing new locations as they free up). This is "secure them for me": leave it
-# running and it snaps up ARM the moment Hetzner has stock. COSTS MONEY per grab.
-def "main watch" [size: string = "cax11", --interval: int = 5] {
-  print $"==> watching for ($size); grabbing in any location with stock every ($interval)s. Ctrl-C to stop."
+# main watch — poll until cax appears, then auto-grab UP TO `--max` boxes TOTAL
+# (default 1), at most one per location, then idle. This is the hard cap that
+# stops it ever grabbing "more and more": once it holds --max arm-reserve-* boxes
+# it grabs nothing more. Self-heals — if you release one, it re-grabs to keep
+# --max. COSTS MONEY per grab. Leave running; Ctrl-C (or `arm:watch:down`) to stop.
+def "main watch" [size: string = "cax11", --interval: int = 5, --max: int = 1] {
+  print $"==> watching for ($size); auto-grabbing up to ($max) total \(≤1 per location\) every ($interval)s. Ctrl-C to stop."
   loop {
-    # A single transient API/DNS hiccup must NOT kill a watch meant to run for
-    # hours — log it and retry on the next tick.
+    # A single transient API/DNS hiccup must NOT kill a long-running watch — log
+    # it and retry on the next tick.
     try {
-      let here = (cax-availability | where {|r| $size in $r.cax } | get location)
       let have = (^hcloud server list -o json | from json | where name =~ '^arm-reserve-' | get name)
-      for loc in $here {
-        if not ($"arm-reserve-($loc)" in $have) {
-          print $"  [(date now | format date '%H:%M:%S')] ($size) appeared in ($loc) — grabbing!"
-          grab-one $loc $size
+      # Only look for stock while UNDER the cap — this is what bounds total grabs.
+      if ($have | length) < $max {
+        let here = (cax-availability | where {|r| $size in $r.cax } | get location)
+        mut held = $have
+        for loc in $here {
+          if ($held | length) >= $max { break }
+          if not ($"arm-reserve-($loc)" in $held) {
+            let n = (($held | length) + 1)
+            print $"  [(date now | format date '%H:%M:%S')] ($size) appeared in ($loc) — grabbing ($n)/($max)!"
+            grab-one $loc $size
+            $held = ($held | append $"arm-reserve-($loc)")
+          }
         }
       }
     } catch {|e|
