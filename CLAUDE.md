@@ -44,6 +44,13 @@ everything is an uncloud recipe or a thin mise task over uncloud/tofu/hcloud).
    `tofu` reads `HCLOUD_TOKEN`/`CLOUDFLARE_API_TOKEN` from env via `fnox exec` —
    verify infra with `fnox exec -- hcloud ...`, not bare `hcloud`.
 5. Run `cluster:up`/`cluster:down` from a REAL terminal (TTY). `mise run ci` before committing.
+6. **uncloud is `uc` since v0.20** (binary renamed `uncloud`→`uc`; daemon stays
+   `uncloudd`). On a machine's FIRST boot the daemon pulls the Corrosion **Docker
+   image**, and that pull can exceed systemd's start timeout → `uc machine
+   init/add` fails once, the daemon auto-restarts and comes up (image cached).
+   It's intermittent — `cluster-up.nu` + `arm.nu` wrap init/add in `with-pty-retry`
+   (PTY + 3× retry). Verified live on 0.20 (2026-06-27). gRPC proxy format changed
+   in 0.20, so CLI + all machines must share a major — upgrade with no cluster up.
 
 ## Don't
 

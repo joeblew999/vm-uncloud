@@ -23,6 +23,24 @@
 
 const SSH_KEY = "gedw99_hetzner"   # matches tofu var ssh_key_name
 
+# adopt/evict drive `uc machine add/rm`, whose readiness spinner opens /dev/tty
+# (dies headless) and whose v0.20 first-boot Corrosion image pull can race
+# systemd's start timeout. Same workaround as cluster-up.nu: PTY-wrap + retry.
+def with-pty [cmd: list<string>] {
+  if $nu.os-info.name == "macos" { ^script -q /dev/null ...$cmd } else { ^script -qec ($cmd | str join " ") /dev/null }
+}
+def with-pty-retry [cmd: list<string>, --tries: int = 3] {
+  for attempt in 1..$tries {
+    let ok = (try { with-pty $cmd; true } catch { false })
+    if $ok { return }
+    if $attempt < $tries {
+      print -e $"  ⚠ failed \(attempt ($attempt)/($tries)\) — likely the v0.20 corrosion-pull race; retrying in 15s…"
+      sleep 15sec
+    }
+  }
+  error make { msg: $"uc machine op failed after ($tries) attempts" }
+}
+
 # Which cax sizes are available where (by location). `cax` = orderable right now;
 # `supported` = offered at that site at all (empty ⇒ no ARM there, e.g. US/SIN).
 def cax-availability [] {
@@ -130,34 +148,35 @@ def "main release-all" [] {
   for b in $boxes { ^hcloud server delete $b; print $"✓ released ($b)" }
 }
 
-# main adopt — join a held cax box INTO the uncloud cluster (uncloud machine add):
-# SSH in as root, install the daemon, join the WireGuard mesh. The box stays a
-# Hetzner server we own; this only makes it a cluster member. Requires an existing
-# cluster (run `cluster:up` first) whose context is configured locally.
-# ⚠ UNVERIFIED end-to-end — wired from the documented `machine add` flags but not
-# yet run against a live cluster + held box (ARM has been sold out).
+# main adopt — join a held cax box INTO the uncloud cluster (uc machine add): SSH
+# in as root, install the daemon, join the WireGuard mesh. The box stays a Hetzner
+# server we own; this only makes it a cluster member. Requires an existing cluster
+# (run `cluster:up` first) whose context is configured locally.
+# ✓ Verified live via smoke test 2026-06-27 (uc 0.20: add joined a box, ls showed 2).
 def "main adopt" [location: string, --context: string = "", --ssh-key: string = ""] {
   let server = $"arm-reserve-($location)"
   let ip = (try { ^hcloud server ip $server | str trim } catch { "" })
   if ($ip | is-empty) { print -e $"✗ no held box ($server) — grab one first \(see arm:list\)."; exit 1 }
-  mut flags = []
-  if ($context | is-not-empty) { $flags = ($flags | append [-c $context]) }
-  if ($ssh_key | is-not-empty) { $flags = ($flags | append [-i $ssh_key]) }
-  print $"==> adopting ($server) at ($ip) into the cluster as machine ($server) ..."
-  ^uc machine add $"root@($ip)" -n $server ...$flags -y
+  mut cmd = ["uc" "machine" "add" $"root@($ip)" "-n" $server]
+  if ($context | is-not-empty) { $cmd = ($cmd | append ["-c" $context]) }
+  if ($ssh_key | is-not-empty) { $cmd = ($cmd | append ["-i" $ssh_key]) }
+  $cmd = ($cmd | append "-y")
+  print $"==> adopting ($server) at ($ip) into the cluster ..."
+  with-pty-retry $cmd
   print $"✓ ($server) joined the cluster. Evict but keep the box: mise run arm:evict -- ($location)"
 }
 
 # main evict — remove a cax box from the cluster but KEEP the Hetzner server, so
-# you keep the scarce ARM capacity. `uncloud machine rm` resets the box (re-adopt
-# any time). To actually delete the server and stop billing, use `arm:release`.
-# ⚠ UNVERIFIED end-to-end (see adopt).
+# you keep the scarce ARM capacity. `uc machine rm` resets the box (re-adopt any
+# time). To actually delete the server and stop billing, use `arm:release`.
+# ✓ Verified live via smoke test 2026-06-27 (left the cluster; the box kept running).
 def "main evict" [location: string, --context: string = ""] {
   let server = $"arm-reserve-($location)"
-  mut flags = []
-  if ($context | is-not-empty) { $flags = ($flags | append [-c $context]) }
+  mut cmd = ["uc" "machine" "rm" $server]
+  if ($context | is-not-empty) { $cmd = ($cmd | append ["-c" $context]) }
+  $cmd = ($cmd | append "-y")
   print $"==> evicting ($server) from the cluster — the Hetzner server stays \(still billing\) ..."
-  ^uc machine rm $server ...$flags -y
+  with-pty-retry $cmd
   print $"✓ ($server) left the cluster; box retained. Re-adopt: mise run arm:adopt -- ($location). Delete: mise run arm:release -- ($location)"
 }
 

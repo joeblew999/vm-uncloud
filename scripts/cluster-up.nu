@@ -24,6 +24,23 @@ def with-pty [cmd: list<string>] {
   }
 }
 
+# uncloud v0.20's daemon pulls the Corrosion Docker image on FIRST boot; that pull
+# can exceed systemd's service-start timeout, so `machine init/add` fails on the
+# first attempt while the daemon auto-restarts and comes up (Corrosion then
+# cached). It's intermittent. Retry through it. (Verified live 2026-06-27: init
+# failed once then succeeded on retry; add sometimes succeeds first try.)
+def with-pty-retry [cmd: list<string>, --tries: int = 3] {
+  for attempt in 1..$tries {
+    let ok = (try { with-pty $cmd; true } catch { false })
+    if $ok { return }
+    if $attempt < $tries {
+      print -e $"  ⚠ machine op failed \(attempt ($attempt)/($tries)\) — likely the v0.20 corrosion-pull race; daemon should recover, retrying in 15s…"
+      sleep 15sec
+    }
+  }
+  error make { msg: $"machine op failed after ($tries) attempts" }
+}
+
 # --context selects a node class with ISOLATED state: a tofu workspace named
 # <context> + tofu/<context>.tfvars + an uncloud context of the same name. Omit
 # it for the default cluster (workspace "default", terraform.tfvars, context
@@ -97,10 +114,10 @@ def main [--context: string = ""] {
     let mname = $"($ctx)-($row.index + 1)"
     if $row.index == 0 {
       print $"==> uc machine init root@($ip) --context ($ctx) --name ($mname) --no-dns"
-      with-pty (["uc" "machine" "init" $"root@($ip)" "--context" $ctx "--name" $mname "--no-dns"] ++ $caddy_flag ++ ["-i" $key "-y"])
+      with-pty-retry (["uc" "machine" "init" $"root@($ip)" "--context" $ctx "--name" $mname "--no-dns"] ++ $caddy_flag ++ ["-i" $key "-y"])
     } else {
       print $"==> uc machine add root@($ip) --context ($ctx) --name ($mname)"
-      with-pty ["uc" "machine" "add" $"root@($ip)" "--context" $ctx "--name" $mname "-i" $key "-y"]
+      with-pty-retry ["uc" "machine" "add" $"root@($ip)" "--context" $ctx "--name" $mname "-i" $key "-y"]
     }
   }
 
