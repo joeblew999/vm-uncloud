@@ -1,7 +1,8 @@
-# Thin wrapper around `mise run ci`. The SAME checks run locally — see
-# scripts/ci.nu and the `ci` task in mise.toml. This workflow holds NO
-# validation logic; mise installs the pinned tools and runs the task.
 name: check
+# Thin stub — the shared reusable workflow runs `mise run ci` (this repo's OpenTofu
+# fmt/validate + nushell parse), the SAME task you run locally. checkout/mise/cache
+# are owned by joeblew999/.github so they never drift. ubuntu-only: infra checks
+# don't need the mac/windows matrix.
 on:
   push:
     branches: [main]
@@ -9,20 +10,10 @@ on:
     branches: [main]
   workflow_dispatch:
 
-permissions:
-  contents: read
-
 jobs:
   ci:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install mise + repo tools
-        uses: jdx/mise-action@v2
-        with:
-          install: true
-          cache: true
-
-      - name: mise run ci
-        run: mise run ci
+    uses: joeblew999/.github/.github/workflows/reusable-mise-ci.yml@v0.69.0
+    with:
+      task: ci
+      os-matrix: '["ubuntu-latest"]'
+      rust-cache: false
