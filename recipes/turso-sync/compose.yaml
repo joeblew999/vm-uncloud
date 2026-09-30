@@ -1,0 +1,46 @@
+# turso-sync — self-hosted NEW Turso sync engine (offline-first bidirectional
+# sync), the "good sync stuff": embedded clients (@tursodatabase/sync) write to a
+# LOCAL SQLite file at file speed offline, then push/pull against this server.
+#
+#   mise run recipe:local turso-sync       # locally  (builds the image, :8080)
+#   mise run turso-sync:smoke              # prove /v2/pipeline + /pull-updates
+#
+# Two endpoints (the open sync protocol): POST /v2/pipeline (SQL-over-HTTP / Hrana)
+# and POST /pull-updates (protobuf WAL page updates the client pulls since its
+# revision). Proven end-to-end against tursodb 0.6.1.
+#
+# ── HOW THIS DIFFERS FROM THE `turso` (sqld/libSQL) RECIPE ─────────────────────
+# `turso` = the LEGACY libSQL network server: native JWT auth, bottomless->R2
+# backup, namespaces. Mature. Use it for a central D1-style DB.
+# `turso-sync` = the NEW engine's sync server for OFFLINE-FIRST apps. It is BETA
+# and the reference server is deliberately minimal:
+#   - NO native auth   -> front with Caddy + an auth proxy before exposing it.
+#   - NO native TLS    -> Caddy terminates TLS (x-ports `/https`), like the rest.
+#   - NO bottomless    -> it's a plain SQLite file; durability = back the file up
+#                         (litestream -> R2 is the intended sidecar; TODO).
+#   - single-writer, one request at a time (reference impl concurrency model).
+# Pick turso-sync ONLY when you specifically want offline-first local-write sync;
+# otherwise the `turso` recipe is the robust default. See README.
+#
+# No upstream server image exists — built from ./Dockerfile (pinned binary).
+services:
+  turso-sync:
+    build:
+      context: .
+      args:
+        # Keep in sync with the Dockerfile default; bump both together.
+        TURSO_VERSION: "0.6.1"
+    # tursodb <db-file> --sync-server <addr>. ENTRYPOINT is `tursodb`.
+    command: ["/data/db.sqlite", "--sync-server", "0.0.0.0:8080"]
+    volumes:
+      # The synced SQLite file. NOT yet backed off-box (see durability TODO) —
+      # unlike the `turso` recipe, losing this volume currently loses data.
+      - turso_sync_data:/data
+    x-ports:
+      # Public HTTPS via Caddy (wildcard cert). NB: no auth yet — treat as
+      # overlay-internal until an auth proxy is in front. Kept here to mirror the
+      # `turso` recipe shape; gate before real exposure.
+      - db-sync.${DOMAIN}:8080/https
+
+volumes:
+  turso_sync_data:

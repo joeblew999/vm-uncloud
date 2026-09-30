@@ -5,10 +5,35 @@ Cloudflare D1 that **any of our projects can consume**. Continuously backed up t
 R2 (box is disposable), JWT-authenticated, multi-database, with a rehearsable DR
 drill. Deploy it once; every project gets a robust SQLite DB.
 
+> **Two turso recipes — pick the engine.** This is `turso` (**libSQL/sqld**), the
+> mature central D1-style server. For the *new* Turso engine's **offline-first sync
+> server** (apps write to a local file, then sync) see the sibling
+> [`turso-sync`](../turso-sync/README.md) recipe. Most projects want this one.
+
 ```bash
-mise run recipe:deploy turso          # deploy on the cluster (auth + backup -> R2)
+mise run recipe:deploy turso   # deploy on the cluster (auth + backup -> R2)
 mise run recipe:local turso    # locally (no auth/backup, ephemeral dev)
+mise run turso:smoke           # prove a running server serves the full contract
 ```
+
+## Verify it works (no cluster needed)
+
+`turso:smoke` is the recipe's own **"smoke is code"** drill (same spirit as the DR
+drill below): it drives a *live* sqld through the exact contract a consumer relies
+on and exits non-zero if anything regresses, so it can gate CI or a scheduled
+check. It (1) round-trips SQL on the `default` database, (2) creates an isolated
+namespace via the admin API, (3) round-trips on it via Host routing, and (4)
+asserts the two databases can't see each other.
+
+```bash
+mise run recipe:local turso    # HTTP :8080, admin :9090, no auth (ephemeral)
+mise run turso:smoke           # → ✅ SMOKE PASSED
+```
+
+Against a real server, point it anywhere: `TURSO_URL=… TURSO_ADMIN_URL=…
+TURSO_TOKEN=… mise run turso:smoke`. The local recipe now publishes the admin port
+(9090) too, so `turso:db:create` and the multi-DB path are exercisable locally —
+**per-database isolation is proven locally, not only in-cluster.**
 
 ## Consume from another project (the easy path)
 
@@ -52,6 +77,25 @@ see "Read-scale" below. Every database is **automatically backed up to R2 and
 covered by the weekly DR drill** — no per-project setup.
 
 The contract: **URL + token + a database name.**
+
+### The `turso` CLI (the standard client)
+
+We self-host the **server** (libsql-server); the official **`turso` CLI** is the
+standard **client**. `turso db shell` opens an interactive SQL shell against any
+libSQL URL — self-hosted included:
+
+```bash
+mise run turso:shell                          # local recipe:local server
+mise run turso:shell -- "select 1"            # one-shot query
+TURSO_URL=https://db.<domain> TURSO_TOKEN=… mise run turso:shell   # deployed
+```
+
+> Only the *client* commands (`turso db shell`) apply to a self-hosted server.
+> `turso db create` / `turso db tokens` / `turso auth` are **Turso Cloud**
+> (platform-API) commands — for our self-hosted server the equivalents are the
+> admin API (`turso:db:create`) and Ed25519 JWTs (`turso:token`). `turso dev`
+> runs a throwaway local libSQL but is dev-only (no auth/backup/namespaces) — use
+> `recipe:local` instead, which mirrors the production config.
 
 ## Robustness: the box is disposable, R2 is the source of truth
 
@@ -178,8 +222,9 @@ cert `*.db.<domain>`**, because `*.<domain>` only covers one label. One-time ste
    asked to serve those hosts (add the route/x-ports for `*.db.${DOMAIN}`).
 
 Until then, public consumers share the **default** database, and **per-database
-isolation is available in-cluster today** (overlay + Host header). This is the one
-piece that needs a live cluster to wire + verify.
+isolation works today locally and in-cluster** (Host header — proven by
+`turso:smoke`). Only the *public per-subdomain TLS* is unwired — the one piece
+that needs a live cluster to set up + verify.
 
 ## vs corrosion
 

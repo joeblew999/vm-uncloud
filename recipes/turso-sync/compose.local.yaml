@@ -1,0 +1,8 @@
+# Local-only overlay for `mise run recipe:local turso-sync`. Publish the sync
+# server's HTTP port for host access. Local data is ephemeral dev state; `--down`
+# wipes the volume. (No auth/backup/TLS knobs to disable — the new sync server
+# has none natively; see compose.yaml.)
+services:
+  turso-sync:
+    ports:
+      - "8080:8080"

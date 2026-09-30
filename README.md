@@ -1,5 +1,13 @@
 # vm-uncloud
 
+## Shared automation retirement
+
+The former shared mise library is retired. Its imported tasks (`tasks/mise.toml`, `tasks/tool-cliff.toml`) are no longer available. No replacement library was copied into this repository.
+
+The shared `check.yml` GitHub Actions workflow is retired; local `mise run ci` remains available.
+
+Other project-defined tasks and pinned tools remain. Older instructions mentioning retired commands are historical; do not run those commands.
+
 An [Uncloud](https://github.com/psviderski/uncloud) cluster on Hetzner, on your own
 Cloudflare domain. Create it, deploy apps to `*.<domain>`, tear it down. The only
 thing you install is [`mise`](https://mise.jdx.dev) — it provides every other tool,

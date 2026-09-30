@@ -8,13 +8,6 @@
 #
 # Secrets come from fnox (keychain) -> mise tasks. Never hand-edit a .env / .tfvars file.
 
-[task_config]
-# Shared mise task lib. cliff:* = changelog/release intel — track uncloud's
-# unreleased delta with `mise run cliff:repo -- psviderski/uncloud`.
-includes = [
-  "git::https://github.com/joeblew999/.github.git//tasks/mise.toml?ref=v0.69.0",
-  "git::https://github.com/joeblew999/.github.git//tasks/tool-cliff.toml?ref=v0.69.0",
-]
 
 [tools]
 opentofu = "1.12.3"
@@ -45,6 +38,14 @@ hcloud   = "1.65.0"
 "github:joeblew999/xs"      = "0.17.0"
 # yoke — one LLM agent turn as a unix pipe; powers `ai:ask`. Same ecosystem.
 "github:cablehead/yoke"     = "0.4.1"
+# turso — the official Turso CLI. We self-host the SERVER as libsql-server (the
+# turso recipe); this CLI is the standard CLIENT: `turso db shell <url>` opens an
+# interactive SQL shell against ANY libSQL URL (self-hosted included) — used by
+# `turso:shell` instead of hand-rolled curl. NB `turso db create`/`turso db
+# tokens`/`turso auth` are Turso CLOUD commands (platform API) and do NOT apply to
+# our self-hosted server — the self-hosted equivalents are the admin API (db.nu)
+# and Ed25519 JWTs (auth.nu). `turso dev` runs a local libSQL but is dev-only.
+"aqua:tursodatabase/turso-cli" = "1.0.29"
 # aws-cli — ONLY for the win-kvm R2 snapshot transit (Vultr has no hot-snapshot).
 aws                         = "2.35.11"
 # vultr-cli — provisions the win-kvm Vultr Bare Metal node (vultr-{up,init,down,
@@ -169,6 +170,32 @@ run = "nu scripts/recipe-sync.nu"
 [tasks."turso:deploy"]
 description = "Deploy the turso/libSQL recipe onto the cluster (bottomless backup -> R2)"
 run = "mise run recipe:deploy turso"
+
+# ── turso-sync — the NEW Turso engine's sync server (offline-first). Separate
+# from `turso` (sqld/libSQL): BETA, no native auth/backup. See recipes/turso-sync.
+[tasks."turso-sync:smoke"]
+description = "Smoke-test a running turso-sync server: /v2/pipeline round-trip + /pull-updates present (exits non-zero on failure). Local by default; set TURSO_SYNC_URL for a deployed server."
+run = "nu recipes/turso-sync/smoke.nu"
+
+[tasks."turso-sync:backup"]
+description = "Durability: online VACUUM INTO snapshot of the turso-sync server -> R2 (no bottomless on the new engine). Override TURSO_SYNC_ENDPOINT/AWS_* for a self-host/MinIO target."
+run = "fnox exec --if-missing ignore -- nu recipes/turso-sync/backup.nu snapshot"
+
+[tasks."turso-sync:backup:verify"]
+description = "Durability DRILL: snapshot -> download -> tursodb integrity_check (exits non-zero on failure). Verified against MinIO."
+run = "fnox exec --if-missing ignore -- nu recipes/turso-sync/backup.nu verify"
+
+[tasks."turso-sync:restore"]
+description = "Durability: pull the latest turso-sync snapshot from R2 to a local .db file (recovery/inspection)."
+run = "fnox exec --if-missing ignore -- nu recipes/turso-sync/backup.nu restore"
+
+[tasks."turso:shell"]
+description = "Open an interactive SQL shell against the turso server via the official turso CLI (turso db shell). Local by default; set TURSO_URL/TURSO_TOKEN for a deployed server. Usage: mise run turso:shell [-- <sql>]"
+run = "nu recipes/turso/shell.nu"
+
+[tasks."turso:smoke"]
+description = "Smoke-test a running turso: round-trip SQL + create a namespace + prove isolation (exits non-zero on failure). Local by default; set TURSO_URL/TURSO_ADMIN_URL/TURSO_TOKEN for a remote server."
+run = "nu recipes/turso/smoke.nu"
 
 [tasks."turso:token"]
 description = "Print the libSQL client auth token (generates+persists the JWT keypair on first run). Give this to a consuming project."
@@ -603,4 +630,3 @@ run = "fnox exec --if-missing ignore -- nu scripts/arm.nu release"
 [tasks."arm:release-all"]
 description = "Delete ALL secured cax boxes (arm-reserve-*)."
 run = "fnox exec --if-missing ignore -- nu scripts/arm.nu release-all"
-

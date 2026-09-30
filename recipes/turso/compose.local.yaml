@@ -12,3 +12,8 @@ services:
       SQLD_AUTH_JWT_KEY:
     ports:
       - "8080:8080"
+      # Admin API (namespace create/delete). On the cluster this is NEVER
+      # published (overlay-internal only); locally we expose it so
+      # `turso:db:create` / `turso:smoke` can exercise the multi-DB path.
+      # db.nu picks it up via TURSO_ADMIN_URL=http://localhost:9090.
+      - "9090:9090"

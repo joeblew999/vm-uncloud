@@ -1,0 +1,12 @@
+{
+  "name": "turso-sync-example",
+  "private": true,
+  "type": "module",
+  "description": "Offline-first sync round-trip against the self-hosted turso-sync server (standalone; not part of the vm-uncloud toolchain).",
+  "scripts": {
+    "roundtrip": "node roundtrip.mjs"
+  },
+  "dependencies": {
+    "@tursodatabase/sync": "0.6.1"
+  }
+}
