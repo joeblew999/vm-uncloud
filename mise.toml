@@ -49,7 +49,7 @@ hcloud   = "1.65.0"
 aws                         = "2.35.11"
 # vultr-cli — provisions the win-kvm Vultr Bare Metal node (vultr-{up,init,down,
 # snapshot}.nu call it via `fnox exec`). Reads VULTR_API_KEY natively.
-"ubi:vultr/vultr-cli"       = "latest"
+"ubi:vultr/vultr-cli"       = "3.11.0"
 
 [env]
 # Cluster context name `uncloud` uses.
